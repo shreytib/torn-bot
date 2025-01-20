@@ -1693,8 +1693,10 @@ async function runRWChecking(count){
 				)
 				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 			
-			if(users[i].factionID === '16628' && i !== '1441750' && i !== '179208'){
-				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			if(users[i].factionID === '16628'){
+				if(i !== '1441750' && i !== '179208'){
+					client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+				}
 			}
 			else{
 				client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
@@ -1715,7 +1717,7 @@ async function runRWChecking(count){
     console.log(`[    RW     ] x${Object.keys(RW).length} Wait Time: ${minTimeRW}, Last Run Calls: ${lastCallsRW} at:`, new Date(), `in ${elapsedTimeRW} miliseconds.`);
 
 	//minTimeRW = Math.max(10, 60/ ((500 - callsRW)/ Math.max(1, callsRW))) * 1000; // either every 10 seconds, or upto 500 calls per minute
-	minTimeRW = Math.max(5, 60/ (Math.max(((900 - callsRW) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
+	minTimeRW = Math.max(4, 60/ (Math.max(((950 - callsRW) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
 	minTimeRW = Math.round(minTimeRW);
 	lastCallsRW = callsRW;
 
