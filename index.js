@@ -2,6 +2,7 @@
 const fs = require("fs");
 const axios = require('axios');
 const WebSocket = require('ws');
+const https = require('https');
 
 const { Client, GatewayIntentBits , REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
@@ -16,12 +17,25 @@ const client = new Client({
 
 const bot_token = process.env.DISCORD_TOKEN;
 
+// SSL certificates (use your own certificate files)
+const serverOptions = {
+    cert: fs.readFileSync('/path/to/certificate.pem'),
+    key: fs.readFileSync('/path/to/private-key.pem')
+};
+
+// Create HTTPS server
+const server = https.createServer(serverOptions);
+
+// Attach WebSocket server to the HTTPS server
+const wss = new WebSocket.Server({ server });
+
 
 // Start WebSocket server
+/*
 const server = new WebSocket.Server({ host: '0.0.0.0', port: 8080 }, () => {
     console.log('WebSocket server running on ws://18.194.249.101:8080');
 });
-
+*/
 async function HandleWebsocketCheck(armouryID, itemID, data){
 	let temp = data[0];
 	temp['UID'] = armouryID;
@@ -45,7 +59,7 @@ async function HandleWebsocketCheck(armouryID, itemID, data){
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
 
-server.on('connection', (socket) => {
+wss.on('connection', (socket) => {
     console.log('New client connected');
 	welcome_msg = {
 		message : 'Hello, client',
@@ -80,6 +94,10 @@ server.on('connection', (socket) => {
     socket.on('close', () => {
         console.log('Client disconnected');
     });
+});
+
+server.listen(8080, () => {
+    console.log('WebSocket server running on wss://18.194.249.101:8080');
 });
 
 // Function to broadcast messages to connected clients
