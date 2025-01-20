@@ -60,6 +60,10 @@ async function HandleWebsocketCheck(armouryID, itemID, data){
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
 
+wss.on('headers', (headers) => {
+    headers.push('Access-Control-Allow-Origin: *');
+});
+
 wss.on('connection', (socket) => {
     console.log('New client connected');
 	welcome_msg = {
