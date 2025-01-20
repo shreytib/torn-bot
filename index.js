@@ -5,7 +5,7 @@ const WebSocket = require('ws');
 
 const { Client, GatewayIntentBits , REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
