@@ -19,8 +19,8 @@ const bot_token = process.env.DISCORD_TOKEN;
 
 // SSL certificates (use your own certificate files)
 const serverOptions = {
-    cert: fs.readFileSync('/path/to/certificate.pem'),
-    key: fs.readFileSync('/path/to/private-key.pem')
+    cert: fs.readFileSync('./certificate.pem'),
+    key: fs.readFileSync('./private-key.pem')
 };
 
 // Create HTTPS server
