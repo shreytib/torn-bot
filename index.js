@@ -60,10 +60,6 @@ async function HandleWebsocketCheck(armouryID, itemID, data){
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
 
-wss.on('headers', (headers) => {
-    headers.push('Access-Control-Allow-Origin: *');
-});
-
 wss.on('connection', (socket) => {
     console.log('New client connected');
 	welcome_msg = {
@@ -1557,27 +1553,23 @@ async function runUserChecking(count){
 	let keys_list = Object.keys(keys);
 
 	let key_id = '';
-	let user_count = 0;
 
 	for (let i in users){ // stalkList
-		if(user_count % 3 === count % 3){
-			if (key_pos >= keys_list.length) { key_pos = 0; }
-			key_id = keys_list[key_pos].toString();
-			promises.push(userChecking(i, key_id));
-			++key_pos;
-		}
-		++user_count;
+		if (key_pos >= keys_list.length) { key_pos = 0; }
+		key_id = keys_list[key_pos].toString();
+		promises.push(userChecking(i, key_id));
+		++key_pos;
 	}
 
 	await Promise.all(promises);
 
-	minTimeUser = Math.max(10, 60/ (150/ Math.max(1, callsUser))) * 1000; // either every 60 seconds, or upto 150 calls per minute
+	minTimeUser = Math.max(40, 60/ (250/ Math.max(1, callsUser))) * 1000; // either every 60 seconds, or upto 150 calls per minute
 	minTimeUser = Math.round(minTimeUser);
 	lastCallsUser = callsUser;
 	
 	let end = performance.now(); // Record end time
     elapsedTime = Math.round(end - start); // Calculate elapsed time
-    console.log(`[   Users   ] x${user_count} Wait Time: ${minTimeUser}, Last Run Calls: ${lastCallsUser} at:`, new Date(), `in ${elapsedTime} miliseconds.`);
+    console.log(`[   Users   ] x${Object.keys(users).length} Wait Time: ${minTimeUser}, Last Run Calls: ${lastCallsUser} at:`, new Date(), `in ${elapsedTime} miliseconds.`);
 
 	fs.writeFileSync('users.json', JSON.stringify(users));
 }
@@ -1701,7 +1693,13 @@ async function runRWChecking(count){
 				)
 				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 			
-			client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			if(users[i].factionID === '16628' && i !== '1441750' && i !== '179208'){
+				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			}
+			else{
+				client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			}
+			
 			//client.channels.cache.get(bot.channel_logs).send({ content: `${users[i].name}[${i}] has ${onHand} on hand. ${users[i].status} & ${users[i].state}. Last action: ${users[i].lastAPICall.last_action.relative}`});
 
 			pingedUser[i] = [onHand, timestamp];
