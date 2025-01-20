@@ -1,9 +1,11 @@
+
 const fs = require("fs");
 const axios = require('axios');
 const WebSocket = require('ws');
 
 const { Client, GatewayIntentBits , REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
+require('dotenv').config();
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -12,12 +14,12 @@ const client = new Client({
 	],
 });
 
-
+const bot_token = process.env.DISCORD_TOKEN;
 
 
 // Start WebSocket server
-const server = new WebSocket.Server({ port: 8080 }, () => {
-    console.log('WebSocket server running on ws://localhost:8080');
+const server = new WebSocket.Server({ host: '0.0.0.0', port: 8080 }, () => {
+    console.log('WebSocket server running on ws://18.194.249.101:8080');
 });
 
 async function HandleWebsocketCheck(armouryID, itemID, data){
@@ -534,7 +536,7 @@ async function userChecking(index, key_id){
 				else if(users[index].state.includes('Returning') && !(data.status.details.includes('Returning'))){
 					users[index].lastAction = data.last_action.timestamp; // just landed
 				}
-				
+
 				if(users[index].lastAction !== data.last_action.timestamp){
 					users[index].lastAction = data.last_action.timestamp;
 					users[index].soldValue = 0;
@@ -2660,7 +2662,7 @@ const commands = [
 ];
 
 // Register the slash commands using the REST API
-const rest = new REST({ version: '10' }).setToken(bot.token);
+const rest = new REST({ version: '10' }).setToken(bot_token);
 
 (async () => {
   try {
@@ -3195,4 +3197,4 @@ client.once('ready', () => {
 	StartLoop();
 });
 
-client.login(bot.token);
+client.login(bot_token);
