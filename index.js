@@ -1506,6 +1506,12 @@ async function moneyChecking(i){
 
 	await userChecking(i, key_id);
 
+	onHand = users[i].soldValue;
+	if(onHand < 35000000){
+		// not enough for ping
+		return;
+	}
+
 	if(users[i].state === 'Okay' || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
 		//handlePing
 		let color;
