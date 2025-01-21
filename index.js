@@ -1485,7 +1485,87 @@ async function calcWorth(player_id){
 
 
 
+async function moneyChecking(i){
+	let timestamp = parseInt(Date.now()/1000);
+	let onHand = users[i].soldValue;
+	if(onHand < 35000000){
+		// not enough for ping
+		if(Object.keys(users[i].items).length === 0){
+			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
+			delete users[i];
+		}
+		return;
+	}
+	if(pingedUser.hasOwnProperty(i) && (pingedUser[i][0] >= onHand || timestamp - 180 <= pingedUser[i][1])){
+		// already pinged
+		return;
+	}
+	let keys_list = Object.keys(keys);
+	let randomIndex = Math.floor(Math.random() * keys_list.length);
+	let key_id = keys_list[randomIndex];
 
+	await userChecking(i, key_id);
+
+	if(users[i].state === 'Okay' || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
+		//handlePing
+		let color;
+		switch(users[i].status){
+			case "Online": color = "#0ca60c"; break;
+			case "Idle": color = "#e37d10"; break;
+			default: color = "#ccc8c8"; break;
+		}
+	
+		let status = new EmbedBuilder();
+
+		let text = `
+				${users[i].factionName} [${users[i].factionID}]
+				**${users[i].status} & ${users[i].state === 'Hospital' ? `Is leaving hospital <t:${users[i].lastAPICall.status.until}:R>\n` : `Okay`}**
+				
+				**CASH ON HAND = ${shortenNumber(onHand)}**
+
+				ITEMS SOLD:`;
+		
+		for(let j in users[i].soldItems){
+			text = `${text}\n${JSON.stringify(users[i].soldItems[j])}`;
+		}
+
+		text = `${text}\n\nLast action: ${users[i].lastAPICall.last_action.relative}`;
+		
+		status.setTitle(users[i].name + " [" + i + "]")
+			.setColor(color)
+			.setURL('https://www.torn.com/loader.php?sid=attack&user2ID=' + i)
+			.setDescription(text)
+			.addFields(
+				{ name: 'Xanax', value: `${users[i].lastAPICall.personalstats.drugs.xanax}`, inline: true },
+				{ name: ' ', value: ` `, inline: true },
+				{ name: 'LSD', value: `${users[i].lastAPICall.personalstats.drugs.lsd}`, inline: true },
+				{ name: 'SEs', value: `${users[i].lastAPICall.personalstats.items.used.stat_enhancers}`, inline: true },
+				{ name: ' ', value: ` `, inline: true },
+				{ name: 'ELO', value: `${users[i].lastAPICall.personalstats.attacking.elo}`, inline: true }
+			)
+			.addFields(
+				{ name: 'STAT ESTIMATE', value: `${await predictStat(users[i].lastAPICall)}`, inline: true }
+			)
+			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
+		
+		if(users[i].factionID === 16628){
+			if(i !== '1441750' && i !== '179208'){
+				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			}
+		}
+		else{
+			client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+		}
+		
+		//client.channels.cache.get(bot.channel_logs).send({ content: `${users[i].name}[${i}] has ${onHand} on hand. ${users[i].status} & ${users[i].state}. Last action: ${users[i].lastAPICall.last_action.relative}`});
+
+		pingedUser[i] = [onHand, timestamp];
+		if(Object.keys(users[i].items).length === 0){
+			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
+			delete users[i];
+		}
+	}
+}
 
 
 
@@ -1635,82 +1715,12 @@ async function runRWChecking(count){
 	
 	await Promise.all(promises);
 
-	let timestamp = parseInt(Date.now()/1000);
+	const promisesMoney = [];
 
 	for(let i in users){
-		let onHand = users[i].soldValue;
-		if(onHand < 35000000){
-			// not enough for ping
-			if(Object.keys(users[i].items).length === 0){
-				console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
-				delete users[i];
-			}
-			continue;
-		}
-		if(pingedUser.hasOwnProperty(i) && (pingedUser[i][0] >= onHand || timestamp - 180 <= pingedUser[i][1])){
-			// already pinged
-			continue;
-		}
-		if(users[i].state === 'Okay' || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
-			//handlePing
-			let color;
-			switch(users[i].status){
-				case "Online": color = "#0ca60c"; break;
-				case "Idle": color = "#e37d10"; break;
-				default: color = "#ccc8c8"; break;
-			}
-		
-			let status = new EmbedBuilder();
-
-			let text = `
-					${users[i].factionName} [${users[i].factionID}]
-					**${users[i].status} & ${users[i].state === 'Hospital' ? `Is leaving hospital <t:${users[i].lastAPICall.status.until}:R>\n` : `Okay`}**
-					
-					**CASH ON HAND = ${shortenNumber(onHand)}**
-
-					ITEMS SOLD:`;
-			
-			for(let j in users[i].soldItems){
-				text = `${text}\n${JSON.stringify(users[i].soldItems[j])}`;
-			}
-
-			text = `${text}\n\nLast action: ${users[i].lastAPICall.last_action.relative}`;
-			
-			status.setTitle(users[i].name + " [" + i + "]")
-				.setColor(color)
-				.setURL('https://www.torn.com/loader.php?sid=attack&user2ID=' + i)
-				.setDescription(text)
-				.addFields(
-					{ name: 'Xanax', value: `${users[i].lastAPICall.personalstats.drugs.xanax}`, inline: true },
-					{ name: ' ', value: ` `, inline: true },
-					{ name: 'LSD', value: `${users[i].lastAPICall.personalstats.drugs.lsd}`, inline: true },
-					{ name: 'SEs', value: `${users[i].lastAPICall.personalstats.items.used.stat_enhancers}`, inline: true },
-					{ name: ' ', value: ` `, inline: true },
-					{ name: 'ELO', value: `${users[i].lastAPICall.personalstats.attacking.elo}`, inline: true }
-				)
-				.addFields(
-					{ name: 'STAT ESTIMATE', value: `${await predictStat(users[i].lastAPICall)}`, inline: true }
-				)
-				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
-			
-			if(users[i].factionID === 16628){
-				if(i !== '1441750' && i !== '179208'){
-					client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
-				}
-			}
-			else{
-				client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
-			}
-			
-			//client.channels.cache.get(bot.channel_logs).send({ content: `${users[i].name}[${i}] has ${onHand} on hand. ${users[i].status} & ${users[i].state}. Last action: ${users[i].lastAPICall.last_action.relative}`});
-
-			pingedUser[i] = [onHand, timestamp];
-			if(Object.keys(users[i].items).length === 0){
-				console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
-				delete users[i];
-			}
-		}
+		promisesMoney.push(moneyChecking(i));
 	}
+	await Promise.all(promisesMoney);
 	
 	let endRW = performance.now(); // Record end time
     elapsedTimeRW = Math.round(endRW - startRW); // Calculate elapsed time
