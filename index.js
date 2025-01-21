@@ -1693,7 +1693,7 @@ async function runRWChecking(count){
 				)
 				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 			
-			if(users[i].factionID === '16628'){
+			if(users[i].factionID === 16628){
 				if(i !== '1441750' && i !== '179208'){
 					client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
 				}
