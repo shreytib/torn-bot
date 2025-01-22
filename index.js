@@ -103,7 +103,7 @@ server.listen(8080, '0.0.0.0', () => {
 
 // Function to broadcast messages to connected clients
 function broadcast(data) {
-    server.clients.forEach(client => {
+    wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(data));
         }
