@@ -776,6 +776,20 @@ async function RWChecking(index, key_id) {
 				acc[item.id] = item;
 				return acc;
 			}, {});
+
+			for (let i in dictionary){
+				if(!listings[index].hasOwnProperty(i)){
+					// new listing - not found.
+					let payload = {
+						message: 'New Listing',
+						itemID: index,
+						listingID: i,
+						UID: dictionary[i].itemDetails.uid,
+						itemName: RW[index],
+					};
+					broadcast(payload);
+				}
+			}
 			
 			for (let i in listings[index]){
 				let userID = listings[index][i].userID;
