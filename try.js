@@ -1,16 +1,23 @@
 const fs = require("fs");
 
 
-let users = require('./users.json');
+//let users = require('./users.json');
 let listings = require('./listings.json');
 //let RW = require('./RW.json');
 
-let amount = 0;
-/*
-for(let i in users['2038423']){
-        console.log(i, users['2038423'][i]);
+//let amount = 0;
+let rw = [];
+
+for(let itemID in listings){
+        for(let listingID in listings[itemID]){
+                let temp = listings[itemID][listingID];
+                temp.listingID = listingID;
+                rw.push(temp);
+        }
 }
-*/
+
+console.log(rw[0]);
+
 //console.log(Object.keys(users).length);
 
 //console.log(Object.keys(users['1441750']));

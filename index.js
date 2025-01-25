@@ -548,15 +548,10 @@ async function userChecking(index, key_id){
             }
             
             if(data.status && ['Traveling', 'Hospital', 'Jail', 'Abroad', 'Okay'].includes(data.status.state)){
-				if(['Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.description.includes('In a'))){
-					// console.log(`${data.name} skipped, Traveling`);
-					users[index].lastAction = data.last_action.timestamp;
+				if(['Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.description.includes('In a') && !data.status.details.includes('Mugged'))){
+					// pass
 				}
-				else if(users[index].state.includes('Returning') && !(data.status.details.includes('Returning'))){
-					users[index].lastAction = data.last_action.timestamp; // just landed
-				}
-
-				if(users[index].lastAction !== data.last_action.timestamp){
+				else if(users[index].lastAction !== data.last_action.timestamp){
 					users[index].lastAction = data.last_action.timestamp;
 					users[index].soldValue = 0;
 					users[index].soldItems = [];
@@ -731,7 +726,7 @@ async function RWChecking(index, key_id) {
 
 	let data = {};
 	let offset = false;
-	let error = false;
+	let error2 = false;
 
     let url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&from=${currdate}&key=${keys[key_id].key}`;
 
@@ -742,7 +737,7 @@ async function RWChecking(index, key_id) {
 			temp['data'] = {};
 			temp = await APICall(url, key_id);
 			callsRW++;
-			if(temp['error'] === 0){
+			if(temp['error'] === 0 && Object.keys(temp['data']).length){
 				if(Object.keys(data).length === 0){
 					data = {...temp['data']};
 				}
@@ -759,7 +754,7 @@ async function RWChecking(index, key_id) {
 				}
 			}
 			else{
-				error = true;
+				error2 = true;
 				offset = false;
 			}
 		} while(offset);
@@ -770,7 +765,7 @@ async function RWChecking(index, key_id) {
 		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in weaponChecking: ${error.message}\n${error.stack}` });
 	}
 
-	if(data && Object.keys(data).length > 0 && !error){
+	if(data && Object.keys(data).length > 0 && !error2){
 		try{
 			const dictionary = data['listings'].reduce((acc, item) => {
 				acc[item.id] = item;
@@ -797,45 +792,37 @@ async function RWChecking(index, key_id) {
 					// anon listing
 					continue;
 				}
-				let soldQty = 0;
-				let soldPrice = listings[index][i].price;
-				let itemName = listings[index][i].name;
-				if(dictionary.hasOwnProperty(i) && (listings[index][i].amount < dictionary[i].amount || soldPrice !== dictionary[i].price)) {
-					if(soldPrice !== dictionary[i].price){
+				
+				if(dictionary.hasOwnProperty(i)) {
+					if(listings[index][i].price !== dictionary[i].price){
 						listings[index][i].price = dictionary[i].price;
 						users[userID].items[i].price = dictionary[i].price;
-					}
-					if(listings[index][i].amount !== dictionary[i].amount){
-						listings[index][i].amount = dictionary[i].amount;
-						users[userID].items[i].amount = dictionary[i].amount;
 					}
 				}
-				let temp_listing = listings[index][i];
-				if(!dictionary.hasOwnProperty(i) || listings[index][i].amount > dictionary[i].amount){
-					// some or all qty sold
-					if(dictionary.hasOwnProperty(i)){
-						soldQty = listings[index][i].amount - dictionary[i].amount;
-						listings[index][i].price = dictionary[i].price;
-						listings[index][i].amount = dictionary[i].amount;
-						users[userID].items[i].price = dictionary[i].price;
-						users[userID].items[i].amount = dictionary[i].amount;
-					}
-					else{
-						soldQty = listings[index][i].amount;
-						//let text = `${users[userID].name} [${userID}] sold/ removed ${itemName} [${i}] x ${soldQty}.\n${users[userID].status} ${users[userID].state}\n${JSON.stringify(listings[index][i])}`;
-						//client.channels.cache.get(bot.channel_logs).send({ content: text });
-						delete users[userID].items[i];
-						delete listings[index][i];
-					}
+				else {
+					// Listing sold
+					let keys_list = Object.keys(keys);
+					let randomIndex = Math.floor(Math.random() * keys_list.length);
+					let key_id = keys_list[randomIndex];
+
+					await userChecking(userID, key_id);
+
+					let soldQty = listings[index][i].amount;
+					let soldPrice = listings[index][i].price;
 					let soldValue = soldQty * soldPrice;
+
+					let itemName = listings[index][i].name;
+					let temp_listing = listings[index][i];
+					
+					delete users[userID].items[i];
+					delete listings[index][i];
+					
 					if(users[userID].status === 'Online' && !users[userID].state.includes('Travelling')){
-						//console.log(`${users[userID].name} [${userID}] sold $${soldValue} worth, but last action ${users[userID].lastAction} too close to now ${currdate}.`);
 						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
 						soldValue = 0;
 						users[userID].soldItems = [];
 					}
 					else{
-						//console.log(`${users[userID].name} [${userID}] sold $${soldValue} worth, last action ${users[userID].lastAction}, now ${currdate}.`);
 						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
 						if(users[userID].job === 5){
 							soldValue *= 0.25;
@@ -1514,19 +1501,8 @@ async function moneyChecking(i){
 		// already pinged
 		return;
 	}
-	let keys_list = Object.keys(keys);
-	let randomIndex = Math.floor(Math.random() * keys_list.length);
-	let key_id = keys_list[randomIndex];
 
-	await userChecking(i, key_id);
-
-	onHand = users[i].soldValue;
-	if(onHand < 35000000){
-		// not enough for ping
-		return;
-	}
-
-	if(users[i].state === 'Okay' || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
+	if(['Okay', 'Traveling', 'Abroad'].includes(users[i].state) || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
 		//handlePing
 		let color;
 		switch(users[i].status){
@@ -1539,7 +1515,7 @@ async function moneyChecking(i){
 
 		let text = `
 				${users[i].factionName} [${users[i].factionID}]
-				**${users[i].status} & ${users[i].state === 'Hospital' ? `Is leaving hospital <t:${users[i].lastAPICall.status.until}:R>\n` : `Okay`}**
+				**${users[i].status} & ${users[i].state === 'Hospital' ? `Is leaving hospital <t:${users[i].lastAPICall.status.until}:R>\n` : `${users[i].state}`}**
 				
 				**CASH ON HAND = ${shortenNumber(onHand)}**
 
@@ -1648,17 +1624,18 @@ async function runUserChecking(count){
 	let start = performance.now();
 	
 	let promises = [];
-	//console.log(`i, count, pos, key, holder`);
 	let key_pos = count;
 	let keys_list = Object.keys(keys);
 
 	let key_id = '';
 
-	for (let i in users){ // stalkList
-		if (key_pos >= keys_list.length) { key_pos = 0; }
-		key_id = keys_list[key_pos].toString();
-		promises.push(userChecking(i, key_id));
-		++key_pos;
+	for (let i in users){
+		if(users[i].soldValue >= 0){
+			if (key_pos >= keys_list.length) { key_pos = 0; }
+			key_id = keys_list[key_pos].toString();
+			promises.push(userChecking(i, key_id));
+			++key_pos;
+		}
 	}
 
 	await Promise.all(promises);
