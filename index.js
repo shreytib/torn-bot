@@ -1642,7 +1642,7 @@ async function runUserChecking(count){
 
 	await Promise.all(promises);
 
-	minTimeUser = Math.max(40, 60/ (250/ Math.max(1, callsUser))) * 1000; // either every 60 seconds, or upto 150 calls per minute
+	minTimeUser = Math.max(30, 60/ (250/ Math.max(1, callsUser))) * 1000; // either every 60 seconds, or upto 150 calls per minute
 	minTimeUser = Math.round(minTimeUser);
 	lastCallsUser = callsUser;
 	
@@ -1726,7 +1726,7 @@ async function runRWChecking(count){
     console.log(`[    RW     ] x${Object.keys(RW).length} Wait Time: ${minTimeRW}, Last Run Calls: ${lastCallsRW} at:`, new Date(), `in ${elapsedTimeRW} miliseconds.`);
 
 	//minTimeRW = Math.max(10, 60/ ((500 - callsRW)/ Math.max(1, callsRW))) * 1000; // either every 10 seconds, or upto 500 calls per minute
-	minTimeRW = Math.max(4, 60/ (Math.max(((950 - callsRW) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
+	minTimeRW = Math.max(4, 60/ (Math.max(((950 - callsRW) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) )), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
 	minTimeRW = Math.round(minTimeRW);
 	lastCallsRW = callsRW;
 
