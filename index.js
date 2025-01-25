@@ -1630,12 +1630,14 @@ async function runUserChecking(count){
 	let key_id = '';
 
 	for (let i in users){
-		if(users[i].soldValue >= 0){
-			if (key_pos >= keys_list.length) { key_pos = 0; }
-			key_id = keys_list[key_pos].toString();
-			promises.push(userChecking(i, key_id));
-			++key_pos;
+		if(users[i].soldValue === 0){
+			continue;
 		}
+		console.log('Checking user: ', users[i].name, users[i].soldValue);
+		if (key_pos >= keys_list.length) { key_pos = 0; }
+		key_id = keys_list[key_pos].toString();
+		promises.push(userChecking(i, key_id));
+		++key_pos;
 	}
 
 	await Promise.all(promises);
