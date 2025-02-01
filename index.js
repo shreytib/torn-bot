@@ -739,12 +739,12 @@ async function handleSold(index, i, userID, currdate){
 		delete listings[index][i];
 		
 		if(data.data.status === 'Online' && !data.data.state.includes('Travelling')){
-			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.status} | ${data.data.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.last_action.status} | ${data.data.status.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
 			soldValue = 0;
 			users[userID].soldItems = [];
 		}
 		else{
-			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.status} | ${data.data.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.last_action.status} | ${data.data.status.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
 			if(users[userID].job === 5){
 				soldValue *= 0.25;
 			}
@@ -1555,7 +1555,7 @@ async function moneyChecking(i){
 			)
 			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 		
-		if(users[i].factionID === 16628){
+		if(users[i].factionID === 16628 || users[i].factionID === '16628'){
 			if(i !== '1441750' && i !== '179208'){
 				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
 			}
