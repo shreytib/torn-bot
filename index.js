@@ -37,25 +37,13 @@ const server = new WebSocket.Server({ host: '0.0.0.0', port: 8080 }, () => {
     console.log('WebSocket server running on ws://18.194.249.101:8080');
 });
 */
-async function HandleWebsocketCheck(armouryID, itemID, data){
-	let temp = data[0];
-	temp['UID'] = armouryID;
-	temp['itemID'] = itemID;
-	new_listing(temp);
-	/*
-	let promises = [];
-
-	for (let i in data){
-		let temp = data[i];
-		temp['UID'] = armouryID;
-		temp['itemID'] = itemID;
-		if(!data[i].anonymous){
-			promises.push(new_listing(temp));
-		}
+async function HandleWebsocketCheck(data_whole){
+	for (let i in data_whole){
+		let temp = data_whole[i]['data'][0];
+		temp['UID'] = data_whole[i]['armouryID'];
+		temp['itemID'] = data_whole[i]['itemID'];
+		new_listing(temp);
 	}
-
-	await Promise.all(promises);
-	*/
 	fs.writeFileSync('users.json', JSON.stringify(users));
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
@@ -76,7 +64,7 @@ wss.on('connection', (socket) => {
             //console.log('Received Parsed Message:', parsedMessage);
 
             // Example: Log the itemID and data from the message
-            const { comment, armouryID, itemID, data } = parsedMessage;
+            const { comment, data_whole } = parsedMessage;
             //console.log('New WebSocket Message:', comment);
             //console.log('armouryID:', armouryID);
             //console.log('itemID:', itemID);
@@ -84,7 +72,7 @@ wss.on('connection', (socket) => {
 			//console.log('Data 1: ', data[0]);
 
 			if(comment === 'Listings'){
-				HandleWebsocketCheck(armouryID, itemID, data);
+				HandleWebsocketCheck(data_whole);
 			}
         } catch (error) {
             console.error('Failed to parse message:', error);
@@ -527,13 +515,13 @@ async function stakeoutChecking(index, key_id) {
 async function userChecking(index, key_id){
 	currdate = parseInt(Date.now()/1000);
 
-	let data = {};
+	data = {};
 	data['error'] = 1;
 	data['data'] = {};
 
-    let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
+	let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
 
-    data = await APICall(url, key_id);
+	data = await APICall(url, key_id);
 	callsUser++;
 
     if(data && data.error === 0){
@@ -726,6 +714,47 @@ async function marketChecking(index, key_id) {
     }
 }
 
+async function handleSold(index, i, userID, currdate){
+	let keys_list = Object.keys(keys);
+	let randomIndex = Math.floor(Math.random() * keys_list.length);
+	let key_id = keys_list[randomIndex];
+
+	let data = {};
+	data['error'] = 1;
+	data['data'] = {};
+
+	let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
+
+	data = await APICall(url, key_id);
+	callsUser++;
+	if(data && data.error === 0){
+		let soldQty = listings[index][i].amount;
+		let soldPrice = listings[index][i].price;
+		let soldValue = soldQty * soldPrice;
+
+		let itemName = listings[index][i].name;
+		let temp_listing = listings[index][i];
+
+		delete users[userID].items[i];
+		delete listings[index][i];
+		
+		if(data.data.status === 'Online' && !data.data.state.includes('Travelling')){
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.status} | ${data.data.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			soldValue = 0;
+			users[userID].soldItems = [];
+		}
+		else{
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.status} | ${data.data.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			if(users[userID].job === 5){
+				soldValue *= 0.25;
+			}
+			users[userID].soldValue += soldValue;
+			users[userID].soldItems.push(`${itemName} [${i}] x ${soldQty} @ $${shortenNumber(soldPrice)}`);
+			moneyChecking(userID);
+		}
+	}
+}
+
 async function RWChecking(index, key_id) {
 	currdate = parseInt(Date.now()/1000);
 
@@ -779,7 +808,7 @@ async function RWChecking(index, key_id) {
 
 			for (let i in dictionary){
 				try{
-					if(!listings[index].hasOwnProperty(i)){
+					if(!listings.hasOwnProperty(index) || !listings[index].hasOwnProperty(i)){
 						// new listing - not found.
 						let payload = {
 							message: 'New Listing',
@@ -811,40 +840,7 @@ async function RWChecking(index, key_id) {
 				}
 				else {
 					// Listing sold
-					let keys_list = Object.keys(keys);
-					let randomIndex = Math.floor(Math.random() * keys_list.length);
-					let key_id = keys_list[randomIndex];
-
-					await userChecking(userID, key_id);
-
-					let soldQty = listings[index][i].amount;
-					let soldPrice = listings[index][i].price;
-					let soldValue = soldQty * soldPrice;
-
-					let itemName = listings[index][i].name;
-					let temp_listing = listings[index][i];
-					
-					try{
-						delete users[userID].items[i];
-					}
-					catch(error){
-						client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: userID: ${userID}\n${error.message}\n${error.stack}\n${JSON.stringify(users[userID])}` });
-					}
-					delete listings[index][i];
-					
-					if(users[userID].status === 'Online' && !users[userID].state.includes('Travelling')){
-						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
-						soldValue = 0;
-						users[userID].soldItems = [];
-					}
-					else{
-						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
-						if(users[userID].job === 5){
-							soldValue *= 0.25;
-						}
-						users[userID].soldValue += soldValue;
-						users[userID].soldItems.push(`${itemName} [${i}] x ${soldQty} @ $${shortenNumber(soldPrice)}`);
-					}
+					handleSold(index, i, userID, currdate);
 				}
 			}
 
@@ -1741,7 +1737,7 @@ async function runRWChecking(count){
     console.log(`[    RW     ] x${Object.keys(RW).length} Wait Time: ${minTimeRW}, Last Run Calls: ${lastCallsRW} at:`, new Date(), `in ${elapsedTimeRW} miliseconds.`);
 
 	//minTimeRW = Math.max(10, 60/ ((500 - callsRW)/ Math.max(1, callsRW))) * 1000; // either every 10 seconds, or upto 500 calls per minute
-	minTimeRW = Math.max(4, 60/ (Math.max(((950) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
+	minTimeRW = Math.max(4, 60/ (Math.max(((1000) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
 	minTimeRW = Math.round(minTimeRW);
 	lastCallsRW = callsRW;
 
