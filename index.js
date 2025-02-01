@@ -548,16 +548,21 @@ async function userChecking(index, key_id){
             }
             
             if(data.status && ['Traveling', 'Hospital', 'Jail', 'Abroad', 'Okay'].includes(data.status.state)){
-				if(['Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.description.includes('In a') && !data.status.details.includes('Mugged'))){
-					// pass
-				}
-				else if(users[index].lastAction !== data.last_action.timestamp){
-					users[index].lastAction = data.last_action.timestamp;
-					users[index].soldValue = 0;
-					users[index].soldItems = [];
-					if(pingedUser.hasOwnProperty(index)){
-						delete pingedUser[index];
+				try{
+					if(['Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.description.includes('In a') && !data.status.details.includes('Mugged'))){
+						// pass
 					}
+					else if(users[index].lastAction !== data.last_action.timestamp){
+						users[index].lastAction = data.last_action.timestamp;
+						users[index].soldValue = 0;
+						users[index].soldItems = [];
+						if(pingedUser.hasOwnProperty(index)){
+							delete pingedUser[index];
+						}
+					}
+				}
+				catch(error){
+					client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in UserChecking: userID: ${index}\n${error.message}\n${error.stack}\n${JSON.stringify(users[index])}` });
 				}
 				if(data.status.state === 'Hospital' && (!users[index].lastAPICall.status.details.includes('Mugged')) && data.status.details.includes('Mugged')){
 					client.channels.cache.get(bot.channel_RWLogs).send({ content: `Player ${users[index].name} [${index}]: ${data.status.details.replace(/<a href = "(.*?)">(.*?)<\/a>/g, '[$2]($1)')} at: ${new Date()}\n${JSON.stringify(users[index].soldItems)}` });
@@ -581,7 +586,7 @@ async function userChecking(index, key_id){
             }
         } catch(error){
             console.log(`Unexpected error: ${error}`);
-            return client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in stakeoutChecking: ${error.message}\n${error.stack}` });
+            return client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in stakeoutChecking: index: ${index}\n${error.message}\n${error.stack}` });
         }
     }
     else{
@@ -773,16 +778,21 @@ async function RWChecking(index, key_id) {
 			}, {});
 
 			for (let i in dictionary){
-				if(!listings[index].hasOwnProperty(i)){
-					// new listing - not found.
-					let payload = {
-						message: 'New Listing',
-						itemID: index,
-						listingID: i,
-						UID: dictionary[i].itemDetails.uid,
-						itemName: RW[index],
-					};
-					broadcast(payload);
+				try{
+					if(!listings[index].hasOwnProperty(i)){
+						// new listing - not found.
+						let payload = {
+							message: 'New Listing',
+							itemID: index,
+							listingID: i,
+							UID: dictionary[i].itemDetails.uid,
+							itemName: RW[index],
+						};
+						broadcast(payload);
+					}
+				}
+				catch(error){
+					client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: itemID: ${index}, listingID: ${i}\n${error.message}\n${error.stack}\n${JSON.stringify(listings[index])}` });
 				}
 			}
 			
@@ -814,7 +824,12 @@ async function RWChecking(index, key_id) {
 					let itemName = listings[index][i].name;
 					let temp_listing = listings[index][i];
 					
-					delete users[userID].items[i];
+					try{
+						delete users[userID].items[i];
+					}
+					catch(error){
+						client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: userID: ${userID}\n${error.message}\n${error.stack}\n${JSON.stringify(users[userID])}` });
+					}
 					delete listings[index][i];
 					
 					if(users[userID].status === 'Online' && !users[userID].state.includes('Travelling')){
