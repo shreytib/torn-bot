@@ -37,25 +37,13 @@ const server = new WebSocket.Server({ host: '0.0.0.0', port: 8080 }, () => {
     console.log('WebSocket server running on ws://18.194.249.101:8080');
 });
 */
-async function HandleWebsocketCheck(armouryID, itemID, data){
-	let temp = data[0];
-	temp['UID'] = armouryID;
-	temp['itemID'] = itemID;
-	new_listing(temp);
-	/*
-	let promises = [];
-
-	for (let i in data){
-		let temp = data[i];
-		temp['UID'] = armouryID;
-		temp['itemID'] = itemID;
-		if(!data[i].anonymous){
-			promises.push(new_listing(temp));
-		}
+async function HandleWebsocketCheck(data_whole){
+	for (let i in data_whole){
+		let temp = data_whole[i]['data'][0];
+		temp['UID'] = data_whole[i]['armouryID'];
+		temp['itemID'] = data_whole[i]['itemID'];
+		new_listing(temp);
 	}
-
-	await Promise.all(promises);
-	*/
 	fs.writeFileSync('users.json', JSON.stringify(users));
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
@@ -76,7 +64,7 @@ wss.on('connection', (socket) => {
             //console.log('Received Parsed Message:', parsedMessage);
 
             // Example: Log the itemID and data from the message
-            const { comment, armouryID, itemID, data } = parsedMessage;
+            const { comment, data_whole } = parsedMessage;
             //console.log('New WebSocket Message:', comment);
             //console.log('armouryID:', armouryID);
             //console.log('itemID:', itemID);
@@ -84,7 +72,7 @@ wss.on('connection', (socket) => {
 			//console.log('Data 1: ', data[0]);
 
 			if(comment === 'Listings'){
-				HandleWebsocketCheck(armouryID, itemID, data);
+				HandleWebsocketCheck(data_whole);
 			}
         } catch (error) {
             console.error('Failed to parse message:', error);
@@ -527,14 +515,75 @@ async function stakeoutChecking(index, key_id) {
 async function userChecking(index, key_id){
 	currdate = parseInt(Date.now()/1000);
 
-	let data = {};
+	data = {};
 	data['error'] = 1;
 	data['data'] = {};
 
-    let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
+	let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
 
-    data = await APICall(url, key_id);
+	data = await APICall(url, key_id);
 	callsUser++;
+
+    if(data && data.error === 0){
+        data = data.data;
+        try{
+            if(data.status.state === "Federal"){
+                delete users[index];
+                console.log(`Removed ${data.name}[${index}] from users since in federal jail.`);
+                client.channels.cache.get(bot.channel_logs).send({ content: `Removed ${data.name}[${index}] from users since in federal jail at: ${new Date()}` });
+                client.channels.cache.get(bot.channel_sales).send({ content: `${data.name}[${index}] is in Federal Jail. Removed from tracking.` });
+                return;
+            }
+            
+            if(data.status && ['Traveling', 'Hospital', 'Jail', 'Abroad', 'Okay'].includes(data.status.state)){
+				try{
+					if(['Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.description.includes('In a') && !data.status.details.includes('Mugged'))){
+						// pass
+					}
+					else if(users[index].lastAction !== data.last_action.timestamp){
+						users[index].lastAction = data.last_action.timestamp;
+						users[index].soldValue = 0;
+						users[index].soldItems = [];
+						if(pingedUser.hasOwnProperty(index)){
+							delete pingedUser[index];
+						}
+					}
+				}
+				catch(error){
+					client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in UserChecking: userID: ${index}\n${error.message}\n${error.stack}\n${JSON.stringify(users[index])}` });
+				}
+				if(data.status.state === 'Hospital' && (!users[index].lastAPICall.status.details.includes('Mugged')) && data.status.details.includes('Mugged')){
+					client.channels.cache.get(bot.channel_RWLogs).send({ content: `Player ${users[index].name} [${index}]: ${data.status.details.replace(/<a href = "(.*?)">(.*?)<\/a>/g, '[$2]($1)')} at: ${new Date()}\n${JSON.stringify(users[index].soldItems)}` });
+					users[index].soldValue = 0;
+					users[index].soldItems = [];
+					if(pingedUser.hasOwnProperty(index)){
+						delete pingedUser[index];
+					}
+				}
+
+				users[index].state = data.status.state;
+				users[index].description = data.status.description;
+				users[index].status = data.last_action.status;
+				users[index].job = data.job.company_type;
+				users[index].factionID = data.faction.faction_id;
+				users[index].factionName = data.faction.faction_name;
+				users[index].lastAPICall = data;
+            } else{
+                console.error('Unexpected response structure:', data.status);
+                return client.channels.cache.get(bot.channel_error).send({ content:`Unexpected response structure: ${data.status}` });
+            }
+        } catch(error){
+            console.log(`Unexpected error: ${error}`);
+            return client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in stakeoutChecking: index: ${index}\n${error.message}\n${error.stack}` });
+        }
+    }
+    else{
+        return;
+    }
+}
+
+async function userChecking2(data){
+	currdate = parseInt(Date.now()/1000);
 
     if(data && data.error === 0){
         data = data.data;
@@ -726,6 +775,48 @@ async function marketChecking(index, key_id) {
     }
 }
 
+async function handleSold(index, i, userID, currdate){
+	let keys_list = Object.keys(keys);
+	let randomIndex = Math.floor(Math.random() * keys_list.length);
+	let key_id = keys_list[randomIndex];
+
+	let data = {};
+	data['error'] = 1;
+	data['data'] = {};
+
+	let url = `https://api.torn.com/v2/user/${userID}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
+
+	data = await APICall(url, key_id);
+	callsUser++;
+	if(data && data.error === 0){
+		let soldQty = listings[index][i].amount;
+		let soldPrice = listings[index][i].price;
+		let soldValue = soldQty * soldPrice;
+
+		let itemName = listings[index][i].name;
+		let temp_listing = listings[index][i];
+
+		delete users[userID].items[i];
+		delete listings[index][i];
+		
+		if(data.data.status === 'Online' && !data.data.state.includes('Travelling')){
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.last_action.status} | ${data.data.status.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			soldValue = 0;
+			users[userID].soldItems = [];
+		}
+		else{
+			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.last_action.status} | ${data.data.status.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
+			if(users[userID].job === 5){
+				soldValue *= 0.25;
+			}
+			users[userID].soldValue += soldValue;
+			users[userID].soldItems.push(`${itemName} [${i}] x ${soldQty} @ $${shortenNumber(soldPrice)}`);
+			moneyChecking(userID, data.data);
+			userChecking2(data);
+		}
+	}
+}
+
 async function RWChecking(index, key_id) {
 	currdate = parseInt(Date.now()/1000);
 
@@ -779,7 +870,7 @@ async function RWChecking(index, key_id) {
 
 			for (let i in dictionary){
 				try{
-					if(!listings[index].hasOwnProperty(i)){
+					if(!listings.hasOwnProperty(index) || !listings[index].hasOwnProperty(i)){
 						// new listing - not found.
 						let payload = {
 							message: 'New Listing',
@@ -811,40 +902,7 @@ async function RWChecking(index, key_id) {
 				}
 				else {
 					// Listing sold
-					let keys_list = Object.keys(keys);
-					let randomIndex = Math.floor(Math.random() * keys_list.length);
-					let key_id = keys_list[randomIndex];
-
-					await userChecking(userID, key_id);
-
-					let soldQty = listings[index][i].amount;
-					let soldPrice = listings[index][i].price;
-					let soldValue = soldQty * soldPrice;
-
-					let itemName = listings[index][i].name;
-					let temp_listing = listings[index][i];
-					
-					try{
-						delete users[userID].items[i];
-					}
-					catch(error){
-						client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: userID: ${userID}\n${error.message}\n${error.stack}\n${JSON.stringify(users[userID])}` });
-					}
-					delete listings[index][i];
-					
-					if(users[userID].status === 'Online' && !users[userID].state.includes('Travelling')){
-						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
-						soldValue = 0;
-						users[userID].soldItems = [];
-					}
-					else{
-						client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, ${users[userID].status} | ${users[userID].state}, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
-						if(users[userID].job === 5){
-							soldValue *= 0.25;
-						}
-						users[userID].soldValue += soldValue;
-						users[userID].soldItems.push(`${itemName} [${i}] x ${soldQty} @ $${shortenNumber(soldPrice)}`);
-					}
+					handleSold(index, i, userID, currdate);
 				}
 			}
 
@@ -1501,7 +1559,10 @@ async function calcWorth(player_id){
 
 
 
-async function moneyChecking(i){
+async function moneyChecking(i, data = null){
+	if(!data){
+		data = users[i].lastAPICall;
+	}
 	let timestamp = parseInt(Date.now()/1000);
 	let onHand = users[i].soldValue;
 	if(onHand < 35000000){
@@ -1520,7 +1581,7 @@ async function moneyChecking(i){
 	if(['Okay', 'Traveling', 'Abroad'].includes(users[i].state) || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
 		//handlePing
 		let color;
-		switch(users[i].status){
+		switch(data.last_action.status){
 			case "Online": color = "#0ca60c"; break;
 			case "Idle": color = "#e37d10"; break;
 			default: color = "#ccc8c8"; break;
@@ -1530,7 +1591,7 @@ async function moneyChecking(i){
 
 		let text = `
 				${users[i].factionName} [${users[i].factionID}]
-				**${users[i].status} & ${users[i].state === 'Hospital' ? `Is leaving hospital <t:${users[i].lastAPICall.status.until}:R>\n` : `${users[i].state}`}**
+				**${data.last_action.status} & ${data.status.state === 'Hospital' ? `Is leaving hospital <t:${data.status.until}:R>\n` : `${data.status.state}`}**
 				
 				**CASH ON HAND = ${shortenNumber(onHand)}**
 
@@ -1540,27 +1601,30 @@ async function moneyChecking(i){
 			text = `${text}\n${JSON.stringify(users[i].soldItems[j])}`;
 		}
 
-		text = `${text}\n\nLast action: ${users[i].lastAPICall.last_action.relative}`;
+		text = `${text}\n\nLast action: ${data.last_action.relative}`;
 		
 		status.setTitle(users[i].name + " [" + i + "]")
 			.setColor(color)
 			.setURL('https://www.torn.com/loader.php?sid=attack&user2ID=' + i)
 			.setDescription(text)
 			.addFields(
-				{ name: 'Xanax', value: `${users[i].lastAPICall.personalstats.drugs.xanax}`, inline: true },
+				{ name: 'Xanax', value: `${data.personalstats.drugs.xanax}`, inline: true },
 				{ name: ' ', value: ` `, inline: true },
-				{ name: 'LSD', value: `${users[i].lastAPICall.personalstats.drugs.lsd}`, inline: true },
-				{ name: 'SEs', value: `${users[i].lastAPICall.personalstats.items.used.stat_enhancers}`, inline: true },
+				{ name: 'LSD', value: `${data.personalstats.drugs.lsd}`, inline: true },
+				{ name: 'SEs', value: `${data.personalstats.items.used.stat_enhancers}`, inline: true },
 				{ name: ' ', value: ` `, inline: true },
-				{ name: 'ELO', value: `${users[i].lastAPICall.personalstats.attacking.elo}`, inline: true }
+				{ name: 'ELO', value: `${data.personalstats.attacking.elo}`, inline: true }
 			)
 			.addFields(
-				{ name: 'STAT ESTIMATE', value: `${await predictStat(users[i].lastAPICall)}`, inline: true }
+				{ name: 'STAT ESTIMATE', value: `${await predictStat(data)}`, inline: true }
 			)
 			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 		
-		if(users[i].factionID === 16628){
-			if(i !== '1441750' && i !== '179208'){
+		if(data.faction.factionID === 16628){
+			if([1441750, 179208].includes(data.player_id)){
+				// skip
+			}
+			else{
 				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
 			}
 		}
@@ -1648,7 +1712,7 @@ async function runUserChecking(count){
 		if(users[i].soldValue === 0){
 			continue;
 		}
-		console.log('Checking user: ', users[i].name, users[i].soldValue);
+		//console.log('Checking user: ', users[i].name, users[i].soldValue);
 		if (key_pos >= keys_list.length) { key_pos = 0; }
 		key_id = keys_list[key_pos].toString();
 		promises.push(userChecking(i, key_id));
@@ -1656,6 +1720,13 @@ async function runUserChecking(count){
 	}
 
 	await Promise.all(promises);
+
+	let promisesMoney = [];
+
+	for(let i in users){
+		promisesMoney.push(moneyChecking(i));
+	}
+	await Promise.all(promisesMoney);
 
 	minTimeUser = Math.max(30, 60/ (250/ Math.max(1, callsUser))) * 1000; // either every 60 seconds, or upto 150 calls per minute
 	minTimeUser = Math.round(minTimeUser);
@@ -1728,20 +1799,13 @@ async function runRWChecking(count){
 	}
 	
 	await Promise.all(promises);
-
-	const promisesMoney = [];
-
-	for(let i in users){
-		promisesMoney.push(moneyChecking(i));
-	}
-	await Promise.all(promisesMoney);
 	
 	let endRW = performance.now(); // Record end time
     elapsedTimeRW = Math.round(endRW - startRW); // Calculate elapsed time
     console.log(`[    RW     ] x${Object.keys(RW).length} Wait Time: ${minTimeRW}, Last Run Calls: ${lastCallsRW} at:`, new Date(), `in ${elapsedTimeRW} miliseconds.`);
 
 	//minTimeRW = Math.max(10, 60/ ((500 - callsRW)/ Math.max(1, callsRW))) * 1000; // either every 10 seconds, or upto 500 calls per minute
-	minTimeRW = Math.max(4, 60/ (Math.max(((950) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
+	minTimeRW = Math.max(4, 60/ (Math.max(((1000) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsMarket * (60/minTimeMarket)))), 1) / Math.max(1, callsRW))) * 1000; // either every 6 seconds, or upto 180 calls per minute
 	minTimeRW = Math.round(minTimeRW);
 	lastCallsRW = callsRW;
 
