@@ -587,6 +587,7 @@ async function userChecking2(data){
 
     if(data && data.error === 0){
         data = data.data;
+		const index = data.player_id.toString();
         try{
             if(data.status.state === "Federal"){
                 delete users[index];
@@ -799,7 +800,7 @@ async function handleSold(index, i, userID, currdate){
 		delete users[userID].items[i];
 		delete listings[index][i];
 		
-		if(data.data.status === 'Online' && !data.data.state.includes('Travelling')){
+		if(data.data.last_action.status === 'Online' && !data.data.status.state.includes('Travelling')){
 			client.channels.cache.get(bot.channel_RWLogs).send({ content: `${users[userID].name} [${userID}] sold $${shortenNumber(soldValue)} worth, **${data.data.last_action.status} | ${data.data.status.state}**, @ ${new Date(currdate*1000).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\n${i}: \`${JSON.stringify(temp_listing)}\`` });
 			soldValue = 0;
 			users[userID].soldItems = [];
