@@ -3104,6 +3104,9 @@ client.on('interactionCreate', async interaction => {
 	  	let currentChunk = '';
   
 	  	for (let i in users) {
+			if(users[i].soldValue === 0){
+				continue;
+			}
 			let info = (`${users[i].name} [${users[i].id}] Listings: ${Object.keys(users[i].items).length} Cash on Hand: ${shortenNumber(users[i].soldValue)}\n`);
 			if ((currentChunk.length + info.length) >= 2000) {
 		  		chunks.push(currentChunk);
