@@ -796,6 +796,9 @@ async function handleSold(index, i, userID, currdate){
 
 		let itemName = listings[index][i].name;
 		let temp_listing = listings[index][i];
+		if(!users.hasOwnProperty(userID)){
+			return;
+		}
 
 		delete users[userID].items[i];
 		delete listings[index][i];
@@ -1579,7 +1582,7 @@ async function moneyChecking(i, data = null){
 		return;
 	}
 
-	if(['Okay', 'Traveling', 'Abroad'].includes(users[i].state) || (users[i].state === 'Hospital' && users[i].lastAPICall.status.until - 180 <= timestamp)){
+	if(['Okay', 'Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.until - 180 <= timestamp)){
 		//handlePing
 		let color;
 		switch(data.last_action.status){
@@ -1621,7 +1624,7 @@ async function moneyChecking(i, data = null){
 			)
 			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
 		
-		if(data.faction.factionID === 16628){
+		if(data.faction.faction_id === 16628){
 			if([1441750, 179208].includes(data.player_id)){
 				// skip
 			}
