@@ -3107,8 +3107,10 @@ client.on('interactionCreate', async interaction => {
 		interaction.reply({content: `Currently Tracking ${Object.keys(users).length} users.`, ephemeral: true });
 	  	let chunks = [];
 	  	let currentChunk = '';
+		let title = '';
   
 		if(id){
+			title = `${users[id].name} [${id}] has ${Object.keys(users[id].items).length} items for sale.`;
 			for (let i in users[id].items) {
 				let info = (`${users[id].items[i]['name']}, ${users[id].items[i]['price']}\n`);
 				if ((currentChunk.length + info.length) >= 2000) {
@@ -3123,6 +3125,7 @@ client.on('interactionCreate', async interaction => {
 			}
 		}
 		else{
+			title = `Currently Tracking ${Object.keys(users).length} users`;
 			for (let i in users) {
 				if(users[i].soldValue === 0){
 					continue;
@@ -3143,7 +3146,7 @@ client.on('interactionCreate', async interaction => {
   
 	  	for (let chunk of chunks) {
 			let msg = new EmbedBuilder()
-		  		.setTitle(`Currently Tracking ${Object.keys(users).length} users`)
+		  		.setTitle(title)
 		  		.setColor("#4de3e8")
 		  		.setDescription(chunk);
   
