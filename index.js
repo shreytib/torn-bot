@@ -2663,7 +2663,11 @@ const commands = [
 	
 	new SlashCommandBuilder()
 	  	.setName('list_users')
-	  	.setDescription('List all users in database'),
+	  	.setDescription('List all users in database')
+		.addStringOption(option =>
+			option.setName('id')
+				.setDescription('Player ID')
+				.setRequired(false)),
   
 	new SlashCommandBuilder()
 	  	.setName('clear_channel')
@@ -3099,25 +3103,43 @@ client.on('interactionCreate', async interaction => {
 	}
 
 	else if (commandName === 'list_users') {
+		const id = options.getString('id') || '';
 		interaction.reply({content: `Currently Tracking ${Object.keys(users).length} users.`, ephemeral: true });
 	  	let chunks = [];
 	  	let currentChunk = '';
   
-	  	for (let i in users) {
-			if(users[i].soldValue === 0){
-				continue;
+		if(id){
+			for (let i in users[id].items) {
+				let info = (`${users[id].items[i]['name']}, ${users[id].items[i]['price']}\n`);
+				if ((currentChunk.length + info.length) >= 2000) {
+					chunks.push(currentChunk);
+					currentChunk = '';
+				}
+				currentChunk += info;
 			}
-			let info = (`${users[i].name} [${users[i].id}] Listings: ${Object.keys(users[i].items).length} Cash on Hand: ${shortenNumber(users[i].soldValue)}\n`);
-			if ((currentChunk.length + info.length) >= 2000) {
-		  		chunks.push(currentChunk);
-		  		currentChunk = '';
+	
+			if (currentChunk.length > 0) {
+				chunks.push(currentChunk);
 			}
-			currentChunk += info;
-	  	}
-  
-	  	if (currentChunk.length > 0) {
-			chunks.push(currentChunk);
-	  	}
+		}
+		else{
+			for (let i in users) {
+				if(users[i].soldValue === 0){
+					continue;
+				}
+				let info = (`${users[i].name} [${users[i].id}] Listings: ${Object.keys(users[i].items).length} Cash on Hand: ${shortenNumber(users[i].soldValue)}\n`);
+				if ((currentChunk.length + info.length) >= 2000) {
+					  chunks.push(currentChunk);
+					  currentChunk = '';
+				}
+				currentChunk += info;
+			  }
+	  
+			  if (currentChunk.length > 0) {
+				chunks.push(currentChunk);
+			  }
+		}
+	  	
   
 	  	for (let chunk of chunks) {
 			let msg = new EmbedBuilder()
