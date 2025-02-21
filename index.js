@@ -113,18 +113,6 @@ let users = require('./users.json'); // users list
 let RW = require('./RW.json'); // RW list
 let pingedUser = require('./pingedUser.json'); // "1441750" : [value, time];
 
-for (let itemID in listings){
-	listings[itemID] = Object.fromEntries(
-        Object.entries(listings[itemID]).map(([listingID, innerDict]) => [innerDict.UID, innerDict])
-    );
-}
-
-for (let userID in users){
-	users[userID].items = Object.fromEntries(
-        Object.entries(users[userID].items).map(([listingID, innerDict]) => [innerDict.UID, innerDict])
-    );
-}
-
 let bot_pause = 0;
 let count_calls = 0;
 let temp_keys = {};
