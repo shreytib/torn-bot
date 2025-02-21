@@ -994,13 +994,6 @@ async function RWChecking(index, key_id) {
 				else {
 					// Listing sold
 					handleSold(index, i, userID, currdate);
-					let payload = {
-						message: 'RW Sale',
-						itemID: index,
-						UID: dictionary[i]?.itemDetails.uid,
-						itemName: RW[index],
-					};
-					broadcast(payload);
 				}
 			}
 
@@ -1566,6 +1559,13 @@ async function moneyChecking(i, data = null){
 
 	if(['Okay', 'Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.until - 180 <= timestamp)){
 		//handlePing
+		let payload = {
+			message: 'RW Sale',
+			userID: i,
+			money: onHand,
+		};
+		broadcast(payload);
+		
 		let color;
 		switch(data.last_action.status){
 			case "Online": color = "#0ca60c"; break;
