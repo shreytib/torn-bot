@@ -48,6 +48,102 @@ async function HandleWebsocketCheck(data_whole){
 	fs.writeFileSync('listings.json', JSON.stringify(listings));
 }
 
+async function new_listing(data){
+	let userID = data.user?.ID;
+	let listingID = data.UID;
+	let itemID = data.itemID;
+
+	if(listings[itemID]?.hasOwnProperty(listingID)){
+		if(userID && listings[itemID].userName === 'anon'){
+			//was anon but not anymore
+		}
+		else{
+			console.log(`Already added item listing. Skipping`);
+			return;
+		}
+	}
+
+	let itemName = null;
+
+	if(items.hasOwnProperty(itemID)){
+		itemName = items[itemID].name;
+	}
+	else if(RW.hasOwnProperty(itemID)){
+		itemName = RW[itemID];
+	}
+	else{
+		console.log(`**Not adding** ${itemName}[${itemID}] Listed By: ${data.user.name}[${userID}]. Qty ${data.available} @ $${data.price}. Item not being tracked.`);
+		client.channels.cache.get(bot.channel_logs).send({ content: `**Not adding** ${itemName}[${itemID}] Listed By: ${data.user.name}[${userID}]. Qty ${data.available} @ $${data.price}. Item not being tracked.` });
+		return;
+	}
+
+	let iObj = {
+		name: itemName,
+		itemID: itemID,
+		UID: data.UID,
+		price: data.price,
+		amount: data.available,
+		userID: userID ?? '0',
+		userName: userID? data.user.name : 'anon',
+	}
+	if(!listings.hasOwnProperty(itemID)){
+		listings[itemID] = {};
+	}
+	listings[itemID][listingID] = iObj;
+
+	if(!userID){
+		//anon listing
+		console.log(`**Not adding** ${itemName}[${itemID}] Anon Listing. Qty ${data.available} @ $${data.price}.`);
+		client.channels.cache.get(bot.channel_logs).send({ content: `Added ${iObj.name}[${itemID}] Anon Listing. Qty ${iObj.amount} @ $${iObj.price}` });
+		return;
+	}
+
+	let keys_list = Object.keys(keys);
+    let randomIndex = Math.floor(Math.random() * keys_list.length);
+    let key_id = keys_list[randomIndex];
+    let url = `https://api.torn.com/v2/user/${userID}?selections=profile,personalstats&cat=all&key=${keys[key_id].key}`;
+
+    let data2 = await APICall(url, key_id);
+
+	if(data2["error"] === 1){
+		return;
+	}
+
+	data2 = data2.data;
+
+	
+	let uObj = {};
+
+	if(users.hasOwnProperty(userID)){
+		if(!users[userID].items.hasOwnProperty(listingID)){
+			users[userID].items[listingID] = iObj;
+		}
+	}
+	else{
+		uObj = {
+			name: data.user.name,
+			id: userID,
+			factionID: data.faction?.ID,
+			factionName: data.faction?.name,
+			items: {},
+			state: data2.status.state,
+			description: data2.status.description,
+			status: data2.last_action.status,
+			lastAction: data2.last_action.timestamp,
+			soldValue: 0,
+			soldItems: [],
+			job: data2.job?.company_type,
+			lastAPICall: data2,
+		};
+		
+		uObj.items[listingID] = iObj;
+		users[userID] = uObj;
+		
+	}
+	console.log(`Added ${iObj.name}[${itemID}] Listed By: ${users[userID].name}[${userID}]. Qty ${iObj.amount} @ $${iObj.price}`);
+	client.channels.cache.get(bot.channel_logs).send({ content: `Added ${iObj.name}[${itemID}] Listed By: ${users[userID].name}[${userID}]. Qty ${iObj.amount} @ $${iObj.price}` });
+}
+
 wss.on('connection', (socket) => {
     console.log('New client connected');
 	welcome_msg = {
@@ -59,17 +155,9 @@ wss.on('connection', (socket) => {
     // Handle incoming messages
     socket.on('message', (message) => {
         try {
-            // Convert Buffer to string and parse JSON
             const parsedMessage = JSON.parse(message.toString());
-            //console.log('Received Parsed Message:', parsedMessage);
 
-            // Example: Log the itemID and data from the message
             const { comment, data_whole } = parsedMessage;
-            //console.log('New WebSocket Message:', comment);
-            //console.log('armouryID:', armouryID);
-            //console.log('itemID:', itemID);
-            //console.log('data length:', data.length);
-			//console.log('Data 1: ', data[0]);
 
 			if(comment === 'Listings'){
 				HandleWebsocketCheck(data_whole);
@@ -1403,102 +1491,6 @@ async function addProtection(id, value, key){
 		data["error"] = 1;
 		return data;
 	}
-}
-
-async function new_listing(data){
-	let userID = data.user?.ID;
-	let listingID = data.ID;
-	let itemID = data.itemID;
-
-	if(listings[itemID]?.hasOwnProperty(listingID)){
-		if(userID && listings[itemID].userName === 'anon'){
-			//was anon but not anymore
-		}
-		else{
-			console.log(`Already added item listing. Skipping`);
-			return;
-		}
-	}
-
-	let itemName = null;
-
-	if(items.hasOwnProperty(itemID)){
-		itemName = items[itemID].name;
-	}
-	else if(RW.hasOwnProperty(itemID)){
-		itemName = RW[itemID];
-	}
-	else{
-		console.log(`**Not adding** ${itemName}[${itemID}] Listed By: ${data.user.name}[${userID}]. Qty ${data.available} @ $${data.price}. Item not being tracked.`);
-		client.channels.cache.get(bot.channel_logs).send({ content: `**Not adding** ${itemName}[${itemID}] Listed By: ${data.user.name}[${userID}]. Qty ${data.available} @ $${data.price}. Item not being tracked.` });
-		return;
-	}
-
-	let iObj = {
-		name: itemName,
-		itemID: itemID,
-		UID: data.UID,
-		price: data.price,
-		amount: data.available,
-		userID: userID ?? '0',
-		userName: userID? data.user.name : 'anon',
-	}
-	if(!listings.hasOwnProperty(itemID)){
-		listings[itemID] = {};
-	}
-	listings[itemID][listingID] = iObj;
-
-	if(!userID){
-		//anon listing
-		console.log(`**Not adding** ${itemName}[${itemID}] Anon Listing. Qty ${data.available} @ $${data.price}.`);
-		client.channels.cache.get(bot.channel_logs).send({ content: `Added ${iObj.name}[${itemID}] Anon Listing. Qty ${iObj.amount} @ $${iObj.price}` });
-		return;
-	}
-
-	let keys_list = Object.keys(keys);
-    let randomIndex = Math.floor(Math.random() * keys_list.length);
-    let key_id = keys_list[randomIndex];
-    let url = `https://api.torn.com/v2/user/${userID}?selections=profile,personalstats&cat=all&key=${keys[key_id].key}`;
-
-    let data2 = await APICall(url, key_id);
-
-	if(data2["error"] === 1){
-		return;
-	}
-
-	data2 = data2.data;
-
-	
-	let uObj = {};
-
-	if(users.hasOwnProperty(userID)){
-		if(!users[userID].items.hasOwnProperty(listingID)){
-			users[userID].items[listingID] = iObj;
-		}
-	}
-	else{
-		uObj = {
-			name: data.user.name,
-			id: userID,
-			factionID: data.faction?.ID,
-			factionName: data.faction?.name,
-			items: {},
-			state: data2.status.state,
-			description: data2.status.description,
-			status: data2.last_action.status,
-			lastAction: data2.last_action.timestamp,
-			soldValue: 0,
-			soldItems: [],
-			job: data2.job?.company_type,
-			lastAPICall: data2,
-		};
-		
-		uObj.items[listingID] = iObj;
-		users[userID] = uObj;
-		
-	}
-	console.log(`Added ${iObj.name}[${itemID}] Listed By: ${users[userID].name}[${userID}]. Qty ${iObj.amount} @ $${iObj.price}`);
-	client.channels.cache.get(bot.channel_logs).send({ content: `Added ${iObj.name}[${itemID}] Listed By: ${users[userID].name}[${userID}]. Qty ${iObj.amount} @ $${iObj.price}` });
 }
 
 async function calcWorth(player_id){
