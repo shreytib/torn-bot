@@ -113,10 +113,22 @@ let users = require('./users.json'); // users list
 let RW = require('./RW.json'); // RW list
 let pingedUser = require('./pingedUser.json'); // "1441750" : [value, time];
 
+for (let itemID in listings){
+	listings[itemID] = Object.fromEntries(
+        Object.entries(listings[itemID]).map(([listingID, innerDict]) => [innerDict.UID, innerDict])
+    );
+}
+
+for (let userID in users){
+	users[userID].items = Object.fromEntries(
+        Object.entries(users[userID].items).map(([listingID, innerDict]) => [innerDict.UID, innerDict])
+    );
+}
+
 let bot_pause = 0;
 let count_calls = 0;
 let temp_keys = {};
-let pinged = {}; // "1441750" : time;
+let pinged = {};
 let usersWorth = {};
 let stalkList = {};
 
@@ -868,7 +880,7 @@ async function RWChecking(index, key_id) {
 	if(data && Object.keys(data).length > 0 && !error2){
 		try{
 			const dictionary = data['listings'].reduce((acc, item) => {
-				acc[item.id] = item;
+				acc[item.itemDetails.uid] = item;
 				return acc;
 			}, {});
 
@@ -879,7 +891,6 @@ async function RWChecking(index, key_id) {
 						let payload = {
 							message: 'New Listing',
 							itemID: index,
-							listingID: i,
 							UID: dictionary[i].itemDetails.uid,
 							itemName: RW[index],
 						};
@@ -907,59 +918,50 @@ async function RWChecking(index, key_id) {
 				else {
 					// Listing sold
 					handleSold(index, i, userID, currdate);
+					let payload = {
+						message: 'RW Sale',
+						itemID: index,
+						UID: dictionary[i]?.itemDetails.uid,
+						itemName: RW[index],
+					};
+					broadcast(payload);
 				}
 			}
 
-			if(!items.hasOwnProperty(index)){
-				return;
-			}
-			let minCost = Infinity;
-			let qty = 0;
-
-			if ((data.listings === null || data.listings === undefined)) {
+			if(!items.hasOwnProperty(index)){ // skip weapons
 				return;
 			}
 
-			for (let item of data.listings) {
-				if (item.price < minCost) {
-					minCost = item.price;
-					qty = item.amount;
-				}
+			if ((data.listings.length === 0)) {
+				return;
 			}
+
+			const minCost = data.listings[0].price;
+			const qty = data.listings[0].amount;
+			const listing_id = data.listings[0].id;
 
 			if(items[index].lastCheapestValue === minCost && items[index].qty === qty){
 				//console.log(`${items[index].name} no change in listing.`)
 				return;
 			}
 
-			let lastVal = items[index].lastCheapestValue;
-
 			items[index].lastCheapestValue = minCost;
 			items[index].qty = qty;
 
 			let diff = (items[index].minimum - minCost) * qty;
+			let diff2 = ( (items[index].minimum * 0.6) - minCost) * qty;
 
 			let color = "#0ca60c";
 
-			if((['329', '330', '331', '106', '336'].includes(index) && qty === 1) || (['1118', '1119', '1120', '1121', '1122'].includes(index) && qty <= 3)){
-				let diff2 = (items[index].minimum * 1.1) - minCost;
-
-				if(diff2 > 0 && minCost < lastVal){
-					let status = new EmbedBuilder();
-					status.setTitle(`${items[index].qty}x ${items[index].name} [${items[index].id}]`)
-						.setColor(color)
-						.setURL('https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=' + items[index].id)
-						.setDescription("NEW LISTING")
-						.addFields(
-							{ name: 'Price', value: `$${shortenNumber(minCost)}`, inline: true },
-							{ name: ' ', value: " ", inline: true },
-							{ name: 'Quantity', value: `${qty}`, inline: true }
-						)
-						.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
-			
-					client.channels.cache.get(bot.channel_sebuymugs).send({ content: `<@&${bot.role_SE}>`, embeds: [status] });
-					//console.log(`${items[index].name} has a new listing with potential profit: $${diff}, sending message`);
-				}
+			if(diff2 >= 0){
+				let payload = {
+					message: 'Cheap Listing RW',
+					itemID: index,
+					listingID: listing_id,
+					UID: dictionary[listing_id]?.itemDetails.uid || 0,
+					itemName: RW[index],
+				};
+				broadcast(payload);
 			}
 			
 			if(diff >= 0){
@@ -1670,7 +1672,7 @@ async function runStakeoutChecking(count){
 
 	await Promise.all(promises);
 
-	minTimeStakeout = Math.max(5, 60/ (100/ Math.max(1, callsStakeout))) * 1000; // either every 5 seconds, or upto 100 calls per minute
+	minTimeStakeout = Math.max(2, 60/ (100/ Math.max(1, callsStakeout))) * 1000; // either every 2 seconds, or upto 100 calls per minute
 	lastCallsStakeout = callsStakeout;
 	
 	let end = performance.now(); // Record end time
