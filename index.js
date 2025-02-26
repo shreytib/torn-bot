@@ -205,8 +205,6 @@ let bot_pause = 0;
 let count_calls = 0;
 let temp_keys = {};
 let pinged = {};
-let usersWorth = {};
-let stalkList = {};
 
 let callsStakeout = 0;
 let callsProtection = 0;
@@ -511,15 +509,6 @@ async function stakeoutChecking(index, key_id) {
             }
             
             if(data.status && ['Traveling', 'Hospital', 'Jail', 'Abroad', 'Okay'].includes(data.status.state)){
-                if(data.life.current !== players[index].life){
-                    if(data.life.current < players[index].life){
-                        // handle ping
-                        let text = `Life dropped for ${data.name}[${index}] from ${players[index].life} to ${data.life.current}`;
-                        console.log(text);
-                        sendPingStakeout(text, data);
-                    }
-                    players[index].life = data.life.current;
-                }
 
                 if(data.last_action.status !== players[index].last_action_status){
                     // handle ping
@@ -1007,7 +996,6 @@ async function RWChecking(index, key_id) {
 
 			const minCost = data.listings[0].price;
 			const qty = data.listings[0].amount;
-			const listing_id = data.listings[0].id;
 
 			if(items[index].lastCheapestValue === minCost && items[index].qty === qty){
 				//console.log(`${items[index].name} no change in listing.`)
@@ -1026,7 +1014,6 @@ async function RWChecking(index, key_id) {
 				let payload = {
 					message: 'Cheap Listing RW',
 					itemID: index,
-					listingID: listing_id,
 					UID: dictionary[listing_id]?.itemDetails.uid || 0,
 					itemName: RW[index],
 				};
@@ -1483,56 +1470,6 @@ async function addProtection(id, value, key){
 	} catch(error){
 		data["error"] = 1;
 		return data;
-	}
-}
-
-async function calcWorth(player_id){
-	try{
-		let worth = 0;
-		let common_items = 0;
-		let wep_items = 0;
-		let armor_items = 0;
-	
-		if(Object.keys(users[player_id].items).length !== 0) {
-			//console.log(`User ${users[player_id].name} [${player_id}] has ${Object.keys(users[player_id].items).length} items for sale.`)
-			for(itm in users[player_id].items){
-				let itemID = users[player_id].items[itm].itemID;
-				let UID = users[player_id].items[itm].UID;
-				let price = users[player_id].items[itm].price;
-				//console.log(itemID, UID, price);
-				if(UID !== 0 && items.hasOwnProperty(itemID) && price <= items[itemID].minimum * 2){
-					armor_items += price;
-				}
-				else if(UID !== 0 && items.hasOwnProperty(itemID)){
-					armor_items += Math.min(3000000000, price);
-				}
-				else if(UID !== 0){
-					wep_items += Math.min(1000000000, price);
-				}
-				else if(items.hasOwnProperty(itemID) && price <= items[itemID].minimum * 1.25){
-					common_items += price * users[player_id].items[itm].quantity;
-				}
-				else{
-					// do not add. stupid price listed for general item that has a market value associated with it.
-				}
-			}
-		}
-		//console.log(common_items, armor_items, wep_items);
-	
-		worth += (users[player_id].soldValue ?? 0) * 100; // if soldValue is undefined, add 0
-		worth += common_items * 20;
-		worth += armor_items * 8;
-		worth += wep_items * 6;
-	
-		if(users[player_id].lastAPICall.personalstats.networth.total < 0){
-			worth += users[player_id].lastAPICall.personalstats.networth.total * 50;
-		}
-		
-		return worth;
-	}
-	catch (error){
-		console.log(`ERROR CALCWORTH: ${player_id}\n`, error);
-		return 0;
 	}
 }
 
@@ -2083,7 +2020,7 @@ const StartLoop = async () => {
 					const response = await axios.get(`https://api.torn.com/user/?selections=profile&key=${temp_key_info["key"]}`);
 					
 					if (response.data.error) {
-						if ([2, 18, 13].includes(response.data.error.code)) {
+						if ([2, 13].includes(response.data.error.code)) {
 							client.channels.cache.get(bot.channel_logs).send({ content: `${key}'s key is invalid, removing.` });
 							console.log(`${key}'s key is invalid, removing.`);
 							to_delete.push(key);
@@ -2113,29 +2050,6 @@ const StartLoop = async () => {
 		}
 	};
 
-	const manageStalkList = async () => {
-		while (true) {
-			let temp = {};
-			for (let i in users){
-				if(Object.keys(users[i].items).length === 0 && users[i].soldValue <= 50000000){
-					delete users[i];
-					continue;
-				}
-				let worth = await calcWorth(i);
-				temp[i] = worth;
-			}
-
-			// console.log(temp);
-			const entries = Object.entries(temp);
-			const sortedEntries = entries.sort((a, b) => b[1] - a[1]);
-			const top50Entries = sortedEntries.slice(0, 100); // Top X players
-			stalkList = Object.fromEntries(top50Entries);
-			usersWorth = Object.fromEntries(sortedEntries);
-
-			await sleep(15 * 60 * 1000); // 15 minutes
-		}
-	};
-
 	// Start loops concurrently
 	manageStalkList();
 	manageCheckStakeout();
@@ -2148,7 +2062,6 @@ const StartLoop = async () => {
 	manageCheckRW();
 	outputApiCallsCount();
 	resetTempInvalidKeys();
-	manageStalkList();
 
 };
 
