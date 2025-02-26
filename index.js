@@ -2051,7 +2051,7 @@ const StartLoop = async () => {
 	};
 
 	// Start loops concurrently
-	manageStalkList();
+	//manageStalkList();
 	manageCheckStakeout();
 	manageCheckProtection();
 	await sleep(2000);
