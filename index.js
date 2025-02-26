@@ -1067,8 +1067,6 @@ async function APICall(url, key_id){
     data["data"] = {};
     data["error"] = 0;
 
-	console.log(url);
-
 	try {
         
 		let key = keys[key_id].key;
