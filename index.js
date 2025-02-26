@@ -1024,16 +1024,17 @@ async function checkCheapRW(index, data) {
 		}
 	}
 	for (let listing of data.listings){
+		let bucks2 = bucks;
 		if(listing.itemDetails.rarity === 'orange'){
-			bucks *= 3;
+			bucks2 *= 3;
 		}
 		else if(listing.itemDetails.rarity === 'red'){
-			bucks *= 9;
+			bucks2 *= 9;
 		}
 		if(listing.itemDetails.bonuses.length === 2){
-			bucks *= 1.5;
+			bucks2 *= 1.5;
 		}
-		let diff = (bucks * BBValue) - listing.price;
+		let diff = (bucks2 * BBValue) - listing.price;
 		if(diff >= 0){
 			let status = new EmbedBuilder();
 			status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
@@ -1042,7 +1043,7 @@ async function checkCheapRW(index, data) {
 				.setDescription("CHEAPER THAN BUNKER")
 				.addFields(
 					{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
-					{ name: 'BB Val', value: `$${shortenNumber(bucks * BBValue)}`, inline: true },
+					{ name: 'BB Val', value: `$${shortenNumber(bucks2 * BBValue)}`, inline: true },
 					{ name: 'Quantity', value: `${listing.amount}`, inline: true }
 				)
 				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
@@ -1065,6 +1066,8 @@ async function APICall(url, key_id){
 	let data = {}
     data["data"] = {};
     data["error"] = 0;
+
+	console.log(url);
 
 	try {
         
