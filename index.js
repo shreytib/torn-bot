@@ -206,20 +206,22 @@ let count_calls = 0;
 let temp_keys = {};
 let pinged = {};
 
+let BBValue = 5500000;
+const smalls = [];
+const rifles = [];
+const HA = [];
+
 let callsStakeout = 0;
 let callsProtection = 0;
 let callsUser = 0;
-let callsMarket = 0;
 let callsRW = 0;
 let lastCallsStakeout = 0;
 let lastCallsProtection = 0;
 let lastCallsUser = 0;
-let lastCallsMarket = 0;
 let lastCallsRW = 0;
 let minTimeStakeout = 10 * 1000;
 let minTimeProtection = 31 * 1000;
 let minTimeUser = 30 * 1000;
-let minTimeMarket = 10 * 1000;
 let minTimeRW = 30 * 1000;
 
 function shortenNumber(num) {
@@ -721,138 +723,6 @@ async function userChecking2(data){
     }
 }
 
-async function marketChecking(index, key_id) {
-	currdate = parseInt(Date.now()/1000);
-
-	let data = {};
-	let offset = false;
-	let error = false;
-
-    let url = `https://api.torn.com/v2/market/${index}/itemmarket?&from=${currdate}&key=${keys[key_id].key}`;
-	try{
-		do {
-			let temp = {};
-			temp['error'] = 1;
-			temp['data'] = {};
-			temp = await APICall(url, key_id);
-			callsMarket++;
-			if(temp['error'] === 0){
-				if(Object.keys(data).length === 0){
-					data = {...temp['data']};
-				}
-				else{
-					data.itemmarket.listings.push(...temp.data.itemmarket.listings);
-				}
-				if(temp.data._metadata.next){
-					// offset = true;
-					url = `${temp.data._metadata.next}&from=${currdate}&key=${keys[key_id].key}`;
-					// console.log(index, data.itemmarket.item.name, url);
-				}
-				else{
-					offset = false;
-				}
-			}
-			else{
-				error = true;
-				offset = false;
-			}
-		} while(offset);
-
-		data = data.itemmarket;
-	} catch(error){
-		console.log(`Unexpected error: ${error}`);
-		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in marketChecking: ${error.message}\n${error.stack}` });
-	}
-
-	if(data && Object.keys(data).length > 0 && !error){
-		try{
-			if(!items.hasOwnProperty(index)){
-				return;
-			}
-
-			let minCost = Infinity;
-			let qty = 0;
-
-			if ((data.listings === null || data.listings === undefined)) {
-				return;
-			}
-
-			for (let item of data.listings) {
-				if (item.price < minCost) {
-					minCost = item.price;
-					qty = item.amount;
-				}
-			}
-
-			if(items[index].lastCheapestValue === minCost && items[index].qty === qty){
-				//console.log(`${items[index].name} no change in listing.`)
-				return;
-			}
-
-			let lastVal = items[index].lastCheapestValue;
-
-			items[index].lastCheapestValue = minCost;
-			items[index].qty = qty;
-
-			let diff = (items[index].minimum - minCost) * qty;
-
-			let color = "#0ca60c";
-
-			if((['329', '330', '331', '106', '336'].includes(index) && qty === 1) || (['1118', '1119', '1120', '1121', '1122'].includes(index) && qty <= 3)){
-				let diff2 = (items[index].minimum * 1.1) - minCost;
-
-				if(diff2 > 0 && minCost < lastVal){
-					let status = new EmbedBuilder();
-					status.setTitle(`${items[index].qty}x ${items[index].name} [${items[index].id}]`)
-						.setColor(color)
-						.setURL('https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=' + items[index].id)
-						.setDescription("NEW LISTING")
-						.addFields(
-							{ name: 'Price', value: `$${shortenNumber(minCost)}`, inline: true },
-							{ name: ' ', value: " ", inline: true },
-							{ name: 'Quantity', value: `${qty}`, inline: true }
-						)
-						.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
-			
-					client.channels.cache.get(bot.channel_sebuymugs).send({ content: `<@&${bot.role_SE}>`, embeds: [status] });
-					//console.log(`${items[index].name} has a new listing with potential profit: $${diff}, sending message`);
-				}
-			}
-			
-			if(diff >= 0){
-				let status = new EmbedBuilder();
-				status.setTitle(`${items[index].qty}x ${items[index].name} [${items[index].id}]`)
-					.setColor(color)
-					.setURL('https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=' + items[index].id)
-					.setDescription("NEW LISTING")
-					.addFields(
-						{ name: 'Price', value: `$${shortenNumber(minCost)}`, inline: true },
-						{ name: ' ', value: " ", inline: true },
-						{ name: 'Quantity', value: `${qty}`, inline: true },
-						{ name: 'Profit', value: `$${shortenNumber(diff)}`, inline: true },
-						{ name: ' ', value: " ", inline: true },
-						{ name: 'Tracking under', value: `$${shortenNumber(items[index].minimum)}`, inline: true }
-					)
-					.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
-
-				if(diff >= 5000000){
-					client.channels.cache.get(bot.channel_cheapbuys).send({ content: `<@&${bot.role_buy}>`, embeds: [status] });
-				}
-				else if(diff >= 1000000){
-					client.channels.cache.get(bot.channel_cheapbuys).send({ embeds: [status] });
-				}
-				return console.log(`${items[index].name} has a new listing with potential profit: $${diff}, sending message`);
-			}
-		} catch(error){
-			console.log(`Unexpected error: ${error}`);
-			client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in marketChecking: ${error.message}\n${error.stack}` });
-		}
-	}
-    else{
-        return;
-    }
-}
-
 async function handleSold(index, i, userID, currdate){
 	let keys_list = Object.keys(keys);
 	let randomIndex = Math.floor(Math.random() * keys_list.length);
@@ -923,7 +793,7 @@ async function RWChecking(index, key_id) {
 				}
 				if(temp.data._metadata.next){
 					offset = true;
-					url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&offset=${Object.keys(data.itemmarket.listings).length - 2}&from=${currdate}&key=${keys[key_id].key}`;
+					url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&offset=${Object.keys(data.itemmarket.listings).length - 5}&from=${currdate}&key=${keys[key_id].key}`;
 					//console.log(index, data.itemmarket.item.name, url);
 				}
 				else{
@@ -939,11 +809,12 @@ async function RWChecking(index, key_id) {
 		data = data.itemmarket;
 	} catch(error){
 		console.log(`Unexpected error: ${error}`);
-		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in weaponChecking: ${error.message}\n${error.stack}` });
+		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: ${error.message}\n${error.stack}` });
 	}
 
 	if(data && Object.keys(data).length > 0 && !error2){
 		try{
+			checkCheapRW(index, data);
 			const dictionary = data['listings'].reduce((acc, item) => {
 				acc[item.itemDetails.uid] = item;
 				return acc;
@@ -951,7 +822,7 @@ async function RWChecking(index, key_id) {
 
 			for (let i in dictionary){
 				try{
-					if(!listings.hasOwnProperty(index) || !listings[index].hasOwnProperty(i)){
+					if(!listings.hasOwnProperty(index) || !listings[index]?.hasOwnProperty(i)){
 						// new listing - not found.
 						let payload = {
 							message: 'New Listing',
@@ -1130,6 +1001,59 @@ async function protectionChecking(index) {
     }
 	
 	
+}
+
+async function checkCheapRW(index, data) {
+	let checkCheapRWcount = 0;
+	let bucks = 0;
+	if(data.item.type === 'Defensive'){
+		bucks = 12;
+	}
+	else if(data.item.type === 'Melee'){
+		bucks = 6;
+	}
+	else if(data.item.type === 'Primary' || data.item.type === 'Secondary'){
+		if(smalls.includes(data.item.name)){
+			bucks = 4;
+		}
+		else if(rifles.includes(data.item.name)){
+			bucks = 10;
+		}
+		else if(HA.includes(data.item.name)){
+			bucks = 14;
+		}
+	}
+	for (let listing of data.listings){
+		if(listing.itemDetails.rarity === 'orange'){
+			bucks *= 3;
+		}
+		else if(listing.itemDetails.rarity === 'red'){
+			bucks *= 9;
+		}
+		if(listing.itemDetails.bonuses.length === 2){
+			bucks *= 1.5;
+		}
+		let diff = (bucks * BBValue) - listing.price;
+		if(diff >= 0){
+			let status = new EmbedBuilder();
+			status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
+				.setColor("#0ca60c")
+				.setURL(`https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${data.item.id}`)
+				.setDescription("CHEAPER THAN BUNKER")
+				.addFields(
+					{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
+					{ name: 'BB Val', value: `$${shortenNumber(bucks * BBValue)}`, inline: true },
+					{ name: 'Quantity', value: `${listing.amount}`, inline: true }
+				)
+				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
+			
+			client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
+		}
+		checkCheapRWcount++;
+		if(checkCheapRWcount >= 3){
+			return;
+		}
+	}
 }
 
 
@@ -1662,46 +1586,6 @@ async function runUserChecking(count){
 	fs.writeFileSync('users.json', JSON.stringify(users));
 }
 
-async function runMarketChecking(count){
-	callsMarket = 0;
-	let elapsedTimemarket = 0.0;
-	let startmarket = performance.now();
-	
-	const promises = [];
-
-	let keys_list = Object.keys(keys);
-	let key_pos = keys_list.length - count - 1;
-
-	let key_id = '';
-
-	let calls_items = 0;
-
-	for (let i in items) {
-		if(RW.hasOwnProperty(i)){
-			continue;
-		}
-		calls_items += 1;
-		if (key_pos <= 0) { key_pos = keys_list.length - 1; }
-		key_id = keys_list[key_pos].toString();
-		promises.push(marketChecking(i, key_id));	
-		//await userChecking(i, keys[key_pos].key, keys[key_pos].holder);
-		key_pos -= 1;
-	}
-	
-	await Promise.all(promises);
-	// (60 * Object.keys(items).length / (900 - ( ((60 * Object.keys(players).length) / (minTimeStakeout/1000)) + ((60 * Object.keys(protections).length) / (minTimeProtection/1000)) + ((60 * Object.keys(users).length) / (minTimeUser/1000))))) * 1000;
-	//minTimeMarket = Math.max(4, 60/ (Math.max(((900 - callsMarket) - (Math.ceil(lastCallsStakeout * (60/minTimeStakeout)) + Math.ceil(lastCallsProtection * (60/minTimeProtection)) + Math.ceil(lastCallsUser * (60/minTimeUser)) + Math.ceil(lastCallsRW * (60/minTimeRW)))), 1) / Math.max(1, callsMarket))) * 1000; // either every 6 seconds, or upto 180 calls per minute
-	minTimeMarket = Math.max(6, 60/ (150/ Math.max(1, callsMarket))) * 1000; // either every 10 seconds, or upto 500 calls per minute
-	minTimeMarket = Math.round(minTimeMarket);
-	lastCallsMarket = callsMarket;
-	
-	let endmarket = performance.now(); // Record end time
-    elapsedTimemarket = Math.round(endmarket - startmarket); // Calculate elapsed time
-    console.log(`[   Market  ] x${calls_items} Wait Time: ${minTimeMarket}, Last Run Calls: ${lastCallsMarket} at:`, new Date(), `in ${elapsedTimemarket} miliseconds.`);
-
-	fs.writeFileSync('items.json', JSON.stringify(items));
-}
-
 async function runRWChecking(count){
 	callsRW = 0;
 	let elapsedTimeRW = 0.0;
@@ -1888,55 +1772,6 @@ const StartLoop = async () => {
 		}
 	};
 
-	const manageCheckMarket = async () => {
-		try{
-			let runloopMarket = 0;
-			async function GetDatMarket() {
-				try {
-					if(count_calls >= 950){
-						await sleep(minTimeMarket);
-					}
-					const startTimeMarket = Date.now(); // Record the start time
-
-					// Call your function and wait for it to complete
-					await runMarketChecking(runloopMarket);
-
-					if(bot_pause >= 100){
-						console.log(`API disabled. Market paused for 1 minute at:`, new Date());
-						await sleep(60*1000);
-						bot_pause = 0;
-					}
-					
-					const endTimeMarket = Date.now(); // Record the end time
-					const elapsedTimeMarket = endTimeMarket - startTimeMarket; // Calculate elapsed time
-
-					// Update runloopMarket
-					runloopMarket = (runloopMarket >= Object.keys(keys).length - 1) ? 0 : runloopMarket + 1;
-					
-					const waitTimeMarket = Math.max(minTimeMarket - elapsedTimeMarket, 0);
-
-					// Recur to the next iteration of GetDatMarket
-					setTimeout(() => {
-						GetDatMarket();
-					}, waitTimeMarket);
-				} catch (error) {
-					console.error(`An error occurred: ${error.message}\n${error.stack}`);
-					client.channels.cache.get(bot.channel_error).send({ content:`An error occurred in MARKET LOOP (1): ${error.message}\n${error.stack}` });
-					// Optionally, handle the error (e.g., retry the function or exit the loop)
-				}
-			}
-			// Start the loop
-			await GetDatMarket();
-		}
-		catch(error){
-			console.log(`ERROR IN MARKET LOOP: ${error.message}\n${error.stack}`);
-			client.channels.cache.get(bot.channel_error).send({ content: `ERROR IN MARKET LOOP: ${error.message}\n${error.stack}` });
-			await sleep(60 * 1000);
-			manageCheckMarket();
-		}
-		
-	};
-
 	const manageCheckRW = async () => {
 		try{
 			let runloopRW = 0;
@@ -2057,8 +1892,6 @@ const StartLoop = async () => {
 	await sleep(2000);
 	manageCheckUser();
 	await sleep(2000);
-	//manageCheckMarket();
-	//await sleep(2000);
 	manageCheckRW();
 	outputApiCallsCount();
 	resetTempInvalidKeys();
