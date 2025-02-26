@@ -207,9 +207,9 @@ let temp_keys = {};
 let pinged = {};
 
 let BBValue = 5500000;
-const smalls = [];
-const rifles = [];
-const HA = [];
+const smalls = ["16", "24", "25", "108", "233", "241", "248", "483", "484", "485", "486", "487", "488"];
+const rifles = ["26", "28", "30", "219", "223", "225", "398", "399", "612"];
+const HA = ["1152", "1153", "1154", "1155", "1156", "1157"];
 
 let callsStakeout = 0;
 let callsProtection = 0;
