@@ -785,6 +785,9 @@ async function RWChecking(index, key_id) {
 			temp = await APICall(url, key_id);
 			callsRW++;
 			if(temp['error'] === 0 && Object.keys(temp['data']).length){
+				if(temp.data.itemmarket.listings.length === 0){
+					return;
+				}
 				if(Object.keys(data).length === 0){
 					data = {...temp['data']};
 				}
@@ -819,11 +822,6 @@ async function RWChecking(index, key_id) {
 				acc[item.itemDetails.uid] = item;
 				return acc;
 			}, {});
-
-			if(Object.keys(dictionary).length === 0){
-				//client.channels.cache.get(bot.channel_error).send({ content:`0 itemmarket listings returned for ${RW[index]} [${index}]` });
-				return;
-			}
 
 			for (let i in dictionary){
 				try{
