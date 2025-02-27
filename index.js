@@ -205,6 +205,7 @@ let bot_pause = 0;
 let count_calls = 0;
 let temp_keys = {};
 let pinged = {};
+let log_check = false;
 
 let BBValue = 5500000;
 const smalls = ["16", "24", "25", "108", "233", "241", "248", "483", "484", "485", "486", "487", "488"];
@@ -859,8 +860,12 @@ async function RWChecking(index, key_id) {
 					}
 				}
 				else {
+					if(log_check === false){
+						log_check = true;
+						console.log(`Listing ID: ${i} not in itemmarket listings:\n${dictionary}`);
+					}
 					// Listing sold
-					handleSold(index, i, userID, currdate);
+					//handleSold(index, i, userID, currdate);
 				}
 			}
 
