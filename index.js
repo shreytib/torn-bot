@@ -787,7 +787,7 @@ async function RWChecking(index, key_id) {
 			if(temp['error'] === 0 && Object.keys(temp['data']).length){
 				if(temp.data.itemmarket.listings.length === 0 && (listings.hasOwnProperty(index) && Object.keys(listings[index]).length !== 0)){
 					client.channels.cache.get(bot.channel_logs).send({ content:`${RW[index]} [${index}] returned 0 listings. Skipping check.` });
-					return;
+					//return;
 				}
 				if(Object.keys(data).length === 0){
 					data = {...temp['data']};
