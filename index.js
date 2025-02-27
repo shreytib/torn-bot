@@ -859,8 +859,8 @@ async function RWChecking(index, key_id) {
 					}
 				}
 				else {
-					client.channels.cache.get(bot.channel_error).send({ content:`Listing ID: ${i} not in itemmarket listings:\n${JSON.stringify(dictionary)}` });
-					//console.log(`Listing ID: ${i} not in itemmarket listings:\n${JSON.stringify(dictionary)}\n\n`);
+					//client.channels.cache.get(bot.channel_error).send({ content:`Listing ID: ${i} not in itemmarket listings:\n${JSON.stringify(dictionary)}` });
+					console.log(`Listing ID: ${i} not in itemmarket listings:\n${Object.keys(dictionary)}\n\n`);
 					// Listing sold
 					//handleSold(index, i, userID, currdate);
 				}
