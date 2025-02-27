@@ -827,6 +827,10 @@ async function RWChecking(index, key_id) {
 				return acc;
 			}, {});
 
+			if(Object.keys(dictionary).length === 0){
+				client.channels.cache.get(bot.channel_error).send({ content:`0 itemmarket listings returned for ${RW[index]} [${index}]` });
+			}
+
 			for (let i in dictionary){
 				try{
 					if(!listings.hasOwnProperty(index) || !listings[index]?.hasOwnProperty(i)){
@@ -860,8 +864,8 @@ async function RWChecking(index, key_id) {
 				}
 				else {
 					//client.channels.cache.get(bot.channel_error).send({ content:`Listing ID: ${i} not in itemmarket listings:\n${JSON.stringify(dictionary)}` });
-					console.log(`Listing ID: ${i} not in itemmarket listings.`);
-					console.log(dictionary);
+					//console.log(`Listing ID: ${i} not in itemmarket listings.`);
+					//console.log(dictionary);
 					// Listing sold
 					handleSold(index, i, userID, currdate);
 				}
