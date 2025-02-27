@@ -829,6 +829,7 @@ async function RWChecking(index, key_id) {
 
 			if(Object.keys(dictionary).length === 0){
 				client.channels.cache.get(bot.channel_error).send({ content:`0 itemmarket listings returned for ${RW[index]} [${index}]` });
+				return;
 			}
 
 			for (let i in dictionary){
