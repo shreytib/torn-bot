@@ -798,10 +798,12 @@ async function RWChecking(index, key_id) {
 					url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&offset=${Object.keys(data.itemmarket.listings).length - 5}&from=${currdate}&key=${keys[key_id].key}`;
 					//console.log(index, data.itemmarket.item.name, url);
 
-					console.log(`${index} : ${Object.keys(data.itemmarket.listings).length}`);
-					if(Object.keys(data.itemmarket.listings).length === 100 && patch === false){
+					if(Object.keys(data.itemmarket.listings).length !== 100 && patch === false){
 						offset = false;
 						patch = true;
+					}
+					else{
+						console.log(`${index} : ${Object.keys(data.itemmarket.listings).length} : ${url}`);
 					}
 				}
 				else{
@@ -1070,8 +1072,6 @@ async function checkCheapRW(index, data) {
 
 async function APICall(url, key_id){
 	++count_calls;
-
-	console.log(url);
 
 	let data = {}
     data["data"] = {};
