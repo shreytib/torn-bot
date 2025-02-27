@@ -859,7 +859,7 @@ async function RWChecking(index, key_id) {
 					}
 				}
 				else {
-					console.log(`Listing ID: ${i} not in itemmarket listings:\n${dictionary}\n\n`);
+					console.log(`Listing ID: ${i} not in itemmarket listings:\n${JSON.stringify(dictionary)}\n\n`);
 					// Listing sold
 					//handleSold(index, i, userID, currdate);
 				}
