@@ -1012,57 +1012,62 @@ async function protectionChecking(index) {
 }
 
 async function checkCheapRW(index, data) {
-	let checkCheapRWcount = 0;
-	let bucks = 0;
-	if(data.item.type === 'Defensive'){
-		bucks = 12;
+	try{
+		let checkCheapRWcount = 0;
+		let bucks = 0;
+		if(data.item.type === 'Defensive'){
+			bucks = 12;
+		}
+		else if(data.item.type === 'Melee'){
+			bucks = 6;
+		}
+		else if(data.item.type === 'Primary' || data.item.type === 'Secondary'){
+			if(smalls.includes(data.item.name)){
+				bucks = 4;
+			}
+			else if(rifles.includes(data.item.name)){
+				bucks = 10;
+			}
+			else if(HA.includes(data.item.name)){
+				bucks = 14;
+			}
+		}
+		for (let listing of data.listings){
+			let bucks2 = bucks;
+			if(listing.itemDetails.rarity === 'orange'){
+				bucks2 *= 3;
+			}
+			else if(listing.itemDetails.rarity === 'red'){
+				bucks2 *= 9;
+			}
+			if(listing.itemDetails.bonuses.length === 2){
+				bucks2 *= 1.5;
+			}
+			let diff = (bucks2 * BBValue) - listing.price;
+			if(diff >= 0){
+				let status = new EmbedBuilder();
+				status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
+					.setColor("#0ca60c")
+					.setURL(`https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${data.item.id}`)
+					.setDescription("CHEAPER THAN BUNKER")
+					.addFields(
+						{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
+						{ name: 'BB Val', value: `$${shortenNumber(bucks2 * BBValue)}`, inline: true },
+						{ name: 'Quantity', value: `${listing.amount}`, inline: true }
+					)
+					.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
+				
+				client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
+			}
+			checkCheapRWcount++;
+			if(checkCheapRWcount >= 3){
+				return;
+			}
+		}
+	} catch(error){
+		console.log(data);
 	}
-	else if(data.item.type === 'Melee'){
-		bucks = 6;
-	}
-	else if(data.item.type === 'Primary' || data.item.type === 'Secondary'){
-		if(smalls.includes(data.item.name)){
-			bucks = 4;
-		}
-		else if(rifles.includes(data.item.name)){
-			bucks = 10;
-		}
-		else if(HA.includes(data.item.name)){
-			bucks = 14;
-		}
-	}
-	for (let listing of data.listings){
-		let bucks2 = bucks;
-		if(listing.itemDetails.rarity === 'orange'){
-			bucks2 *= 3;
-		}
-		else if(listing.itemDetails.rarity === 'red'){
-			bucks2 *= 9;
-		}
-		if(listing.itemDetails.bonuses.length === 2){
-			bucks2 *= 1.5;
-		}
-		let diff = (bucks2 * BBValue) - listing.price;
-		if(diff >= 0){
-			let status = new EmbedBuilder();
-			status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
-				.setColor("#0ca60c")
-				.setURL(`https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${data.item.id}`)
-				.setDescription("CHEAPER THAN BUNKER")
-				.addFields(
-					{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
-					{ name: 'BB Val', value: `$${shortenNumber(bucks2 * BBValue)}`, inline: true },
-					{ name: 'Quantity', value: `${listing.amount}`, inline: true }
-				)
-				.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
-			
-			client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
-		}
-		checkCheapRWcount++;
-		if(checkCheapRWcount >= 3){
-			return;
-		}
-	}
+	
 }
 
 
