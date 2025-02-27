@@ -827,7 +827,7 @@ async function RWChecking(index, key_id) {
 				return acc;
 			}, {});
 
-			if(Object.keys(dictionary).length === 0 && ![680, 681].includes(index)){
+			if(Object.keys(dictionary).length === 0 && ![680, 681, '680', '681'].includes(index)){
 				client.channels.cache.get(bot.channel_error).send({ content:`0 itemmarket listings returned for ${RW[index]} [${index}]` });
 				return;
 			}
