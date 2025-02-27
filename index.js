@@ -775,8 +775,6 @@ async function RWChecking(index, key_id) {
 	let offset = false;
 	let error2 = false;
 
-	let patch = false;
-
     let url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&from=${currdate}&key=${keys[key_id].key}`;
 
 	try{
@@ -797,11 +795,6 @@ async function RWChecking(index, key_id) {
 					offset = true;
 					url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&offset=${Object.keys(data.itemmarket.listings).length - 5}&from=${currdate}&key=${keys[key_id].key}`;
 					//console.log(index, data.itemmarket.item.name, url);
-
-					if(Object.keys(data.itemmarket.listings).length !== 100 && patch === false){
-						offset = false;
-						patch = true;
-					}
 				}
 				else{
 					offset = false;
