@@ -827,6 +827,8 @@ async function RWChecking(index, key_id) {
 				return acc;
 			}, {});
 
+			console.log(dictionary);
+
 			for (let i in dictionary){
 				try{
 					if(!listings.hasOwnProperty(index) || !listings[index]?.hasOwnProperty(i)){
