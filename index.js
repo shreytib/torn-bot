@@ -802,9 +802,6 @@ async function RWChecking(index, key_id) {
 						offset = false;
 						patch = true;
 					}
-					else{
-						console.log(`${index} : ${Object.keys(data.itemmarket.listings).length} : ${url}`);
-					}
 				}
 				else{
 					offset = false;
