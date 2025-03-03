@@ -816,9 +816,20 @@ async function RWChecking(index, key_id) {
 		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: ${error.message}\n${error.stack}` });
 	}
 
-	if(data && Object.keys(data).length > 0 && !error2){
+	if(data && data.listings.length > 0 && !error2){
 		try{
 			checkCheapRW(index, data);
+			if(((items[index].minimum * 0.75) - data.listings[0].price) >= 0){
+				let payload = {
+					message: 'Cheap Listing RW',
+					itemID: index,
+					UID: data.listings[0].itemDetails.uid || 0,
+					itemName: data.itemmarket.item.name,
+					price: data.listings[0].price
+				};
+				broadcast(payload);
+			}
+
 			const dictionary = data['listings'].reduce((acc, item) => {
 				acc[item.itemDetails.uid] = item;
 				return acc;
@@ -884,19 +895,8 @@ async function RWChecking(index, key_id) {
 			items[index].qty = qty;
 
 			let diff = (items[index].minimum - minCost) * qty;
-			let diff2 = ( (items[index].minimum * 0.6) - minCost) * qty;
 
 			let color = "#0ca60c";
-
-			if(diff2 >= 0){
-				let payload = {
-					message: 'Cheap Listing RW',
-					itemID: index,
-					UID: dictionary[listing_id]?.itemDetails.uid || 0,
-					itemName: RW[index],
-				};
-				broadcast(payload);
-			}
 			
 			if(diff >= 0){
 				let status = new EmbedBuilder();
@@ -1044,6 +1044,15 @@ async function checkCheapRW(index, data) {
 			}
 			let diff = (bucks2 * BBValue) - listing.price;
 			if(diff >= 0){
+				let payload = {
+					message: 'Cheap Listing RW',
+					itemID: data.item.id,
+					UID: listing.itemDetails.uid || 0,
+					itemName: data.itemmarket.item.name,
+					price: listing.price
+				};
+				broadcast(payload);
+
 				let status = new EmbedBuilder();
 				status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
 					.setColor("#0ca60c")
