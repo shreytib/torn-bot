@@ -816,7 +816,7 @@ async function RWChecking(index, key_id) {
 		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in RWChecking: ${error.message}\n${error.stack}` });
 	}
 
-	if(data && data.listings.length > 0 && !error2){
+	if(data && Object.keys(data).length > 0 && !error2){
 		try{
 			checkCheapRW(index, data);
 			if(((items[index]?.minimum * 0.75) - data.listings[0].price) >= 0){
