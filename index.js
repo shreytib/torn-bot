@@ -481,7 +481,7 @@ async function sendPingStakeout(text, data){
     for(let i in players[index].tracking){
         pings += `\n<@${i}> Target ${players[index].name} [${index}] update! Comment: ${players[index].tracking[i].comment}`
     }
-    client.channels.cache.get(bot.channel_stakeout).send({ content: pings, embeds: [status] });
+    client.channels.cache.get(bot.channel_stakeout).send({ content: `${pings} ${data.name} ${data.last_action.status} ${data.status.state}`, embeds: [status] });
 }
 
 
