@@ -819,7 +819,7 @@ async function RWChecking(index, key_id) {
 	if(data && Object.keys(data).length > 0 && !error2){
 		try{
 			checkCheapRW(index, data);
-			if(((items[index]?.minimum * 0.75) - data.listings[0].price) >= 0){
+			if(((items[index]?.minimum * 0.75) - data.listings[0]?.price) >= 0){
 				let payload = {
 					message: 'Cheap Listing RW',
 					itemID: index,
