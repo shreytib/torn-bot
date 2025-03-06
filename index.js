@@ -516,7 +516,7 @@ async function stakeoutChecking(index, key_id) {
                     // handle ping
                     let text = `Status change for ${data.name}[${index}]: ${players[index].last_action_status} -> ${data.last_action.status}`;
                     console.log(text);
-                    sendPingStakeout(text, data);
+                    //sendPingStakeout(text, data);
 
                     players[index].last_action_status = data.last_action.status;
                 }
@@ -527,7 +527,7 @@ async function stakeoutChecking(index, key_id) {
                         // handle ping
                         let text = `User ${data.name}[${index}] is in the hospital. ${data.status.description}`;
                         console.log(text);
-                        sendPingStakeout(text, data);
+                        //sendPingStakeout(text, data);
                     }
                     
                     // Started Travelling
