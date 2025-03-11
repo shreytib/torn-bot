@@ -1558,7 +1558,7 @@ async function runProtectionChecking(){
 	
 	await Promise.all(promises);
 
-	minTimeProtection = Math.max(31, 60/ (10/ Math.max(1, callsProtection))) * 1000; // either every 31 seconds, or upto 10 calls per minute
+	minTimeProtection = Math.max(5, 60/ (50/ Math.max(1, callsProtection))) * 1000; // either every 31 seconds, or upto 50 calls per minute
 	lastCallsProtection = callsProtection;
 	
 	let endmarket = performance.now(); // Record end time
