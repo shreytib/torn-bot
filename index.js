@@ -592,7 +592,7 @@ async function stakeoutChecking(index, key_id) {
 				}
 
 				players[index].last_action = data.last_action;
-				players[index].status = data.status.state;
+				players[index].status = data.status;
 				players[index].life = data.life;
         
             } else{
