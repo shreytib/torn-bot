@@ -4,7 +4,7 @@ const axios = require('axios');
 const WebSocket = require('ws');
 const https = require('https');
 
-const { Client, GatewayIntentBits , REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits , REST, Routes, SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 require('dotenv').config({ path: '../.env' });
 const client = new Client({
@@ -2611,10 +2611,22 @@ client.on('interactionCreate', async interaction => {
 		const playerId = options.getInteger('id');
 
 		if (players.hasOwnProperty(playerId)) {
+			const threadID = players[playerId].tracking.channel;
 			const playerName = players[playerId].name;
 			delete players[playerId];
 			fs.writeFileSync('players.json', JSON.stringify(players));
-			return interaction.reply({content: `Stopped tracking player ${playerName} [${playerId}]`, ephemeral: true });
+			interaction.reply({content: `Stopped tracking player ${playerName} [${playerId}]`, ephemeral: true });
+
+			try {
+				const thread = await client.channels.fetch(threadID);
+				if (!thread) return console.log("Thread not found.");
+		
+				await thread.delete();
+			} catch (error) {
+				client.channels.cache.get(bot.channel_error).send({ content: `Error deleting thread:\n${error}`});
+			}
+
+			return;
 		} else {
 			return interaction.reply({content: `Player ${playerId} is not currently being tracked.`, ephemeral: true });
 		}
