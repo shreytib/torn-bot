@@ -593,6 +593,7 @@ async function stakeoutChecking(index, key_id) {
 
 				players[index].last_action = data.last_action;
 				players[index].state = data.status.state;
+				players[index].life = data.life;
         
             } else{
                 console.error('Unexpected response structure:', data.status);
@@ -2638,11 +2639,7 @@ client.on('interactionCreate', async interaction => {
 	  	let currentChunk = '';
   
 	  	for (let i in players) {
-			let text = 'Tracked by';
-			for (let j in players[i].tracking) {
-		  		text += `<@${j}>, criteria: ${players[i].tracking[j]}`;
-			}
-			let info = (`${players[i].name} [${players[i].id}] ${text}\n`);
+			let info = (`${players[i].name} [${players[i].id}] Value: ${players[i].tracking.value} Comment: ${players[i].tracking.comment}\n`);
 			if ((currentChunk.length + info.length) >= 2000) {
 		  		chunks.push(currentChunk);
 		  		currentChunk = '';
