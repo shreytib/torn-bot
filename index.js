@@ -1448,11 +1448,11 @@ async function addPlayer(id){
         pObj["status"] = data.data.status;
         pObj["last_action"] = data.data.last_action;
 		pObj['stats'] = {};
-		pObj['stats']['xanax'] = data.personalstats.drugs.xanax;
-		pObj['stats']['LSD'] = data.personalstats.drugs.lsd;
-		pObj['stats']['SEs'] = data.personalstats.items.used.stat_enhancers;
-		pObj['stats']['ELO'] = data.personalstats.attacking.elo;
-		pObj['stats']['estimate'] = await predictStat(data);
+		pObj['stats']['xanax'] = data.data.personalstats.drugs.xanax;
+		pObj['stats']['LSD'] = data.data.personalstats.drugs.lsd;
+		pObj['stats']['SEs'] = data.data.personalstats.items.used.stat_enhancers;
+		pObj['stats']['ELO'] = data.data.personalstats.attacking.elo;
+		pObj['stats']['estimate'] = await predictStat(data.data);
 
         data.data = pObj;
     }
@@ -1542,6 +1542,7 @@ async function runStakeoutChecking(index, key_pos){
 		let waitTime = Math.max(0, players[index].tracking.interval - elapsedTime);
 
         console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime} seconds.`);
+		fs.writeFileSync('players.json', JSON.stringify(players));
 
         // Schedule the next check based on the player's interval
         setTimeout(() => runStakeoutChecking(index, key_pos + 1), waitTime * 1000);
@@ -1888,6 +1889,10 @@ const StartLoop = async () => {
 	outputApiCallsCount();
 	outputStakeoutCallsCount();
 	resetTempInvalidKeys();
+
+	for(let index in players){
+		runStakeoutChecking(index, 0);
+	}
 
 };
 
