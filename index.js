@@ -1230,29 +1230,23 @@ async function APICall(url, key_id){
 					fs.writeFileSync('keys.json', JSON.stringify(keys));
 					console.log(`${keyname}'s key is making too many requests! Removing it. Add it back later. Skipping request.`);
                     client.channels.cache.get(bot.channel_logs).send({ content:`${keyname}, your key is making too many requests! Removing it temporarily.` });
-                    return data;
-				} else{
+                } else{
 					if (keys.hasOwnProperty(key_id)) {
 						delete keys[key_id];
 					}
 					fs.writeFileSync('keys.json', JSON.stringify(keys));
 					console.log(`${keyname}'s key is invalid, removing and skipping`);
 					client.channels.cache.get(bot.channel_logs).send({ content:`${keyname}, your key is invalid! Removing it.` });
-                    return data;
-				}
+                }
 			} else if ([8, 9, 14, 17].includes(errorCode)) {
                 // Handle other specific errors if needed
                 bot_pause += 1;
-
-                //console.log(`${keyname}'s key is giving error: ${errorCode}, skipping`);
-				//return client.channels.cache.get(bot.channel_logs).send({ content:`${keyname}, Error Code: ${errorCode} ${response.data.error.error}` });
-                return data;
             }
             else {
                 console.error(`Unhandled error code: ${errorCode}`);
                 client.channels.cache.get(bot.channel_logs).send({ content:`Unhandled API error code: ${errorCode} ${response.data.error.error}.\nAPI Key Holder: ${keyname}\nURL: ${url}` });
-                return data;
             }
+			return data;
 		}
 
         if (temp_keys.hasOwnProperty(key_id)) {
@@ -1284,7 +1278,7 @@ async function APICall(url, key_id){
 				// Handle specific HTTP error codes if needed
                 if (error.response.status === 502 || error.response.status === 503 || error.response.status === 504) {
                     bot_pause += 1; // Adjust as per your logic
-                    return;
+                    return data;
                 }
                 // The request was made and the server responded with a status code
                 console.log('Error status:', error.response.status);
