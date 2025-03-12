@@ -513,7 +513,7 @@ async function stakeoutChecking(index, key_id) {
 
                 if(data.last_action.status !== players[index].last_action.status){
                     // handle ping
-                    let text = `Status change for ${data.name}[${index}]: ${players[index].last_action_status} -> ${data.last_action.status}`;
+                    let text = `Status change for ${data.name}[${index}]: ${players[index].last_action.status} -> ${data.last_action.status}`;
                     sendPingStakeout(text, index, 4, data);
                 }
 
