@@ -481,7 +481,7 @@ async function sendPingStakeout(text, index, value, data){
 		)
 		.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
 	
-    client.channels.cache.get(players[id].tracking.channel).send({ content: `${players[index].tracking.role} ${data.name} ${data.last_action.status} ${data.status.state} Comment: ${players[index].tracking.comment}`, embeds: [status] });
+    client.channels.cache.get(players[index].tracking.channel).send({ content: `${players[index].tracking.role} ${data.name} ${data.last_action.status} ${data.status.state} Comment: ${players[index].tracking.comment}`, embeds: [status] });
 }
 
 
