@@ -454,8 +454,6 @@ async function sendPingStakeout(text, index, value, data){
     }
 
     let status = new EmbedBuilder();
-
-    let index = data.player_id;
 	
 	status.setTitle(data.name + " [" + index + "]")
 		.setColor(color)
