@@ -1527,7 +1527,7 @@ async function addProtection(id, value, key){
 
 async function runStakeoutChecking(index, key_pos){
 	try {
-		let start = performance.now();
+		let start = Date.now();
 		if(!players.hasOwnProperty(index)){
 			return;
 		}
@@ -1537,15 +1537,15 @@ async function runStakeoutChecking(index, key_pos){
 
         await stakeoutChecking(index, key_id);
 
-		let end = performance.now(); // Record end time
+		let end = Date.now(); // Record end time
     	let elapsedTime = Math.round(end - start); // Calculate elapsed time
-		let waitTime = Math.max(0, players[index].tracking.interval - elapsedTime);
+		let waitTime = Math.max(0, (players[index].tracking.interval * 1000 - elapsedTime));
 
-        console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime} seconds.`);
+        console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime/1000} seconds.`);
 		fs.writeFileSync('players.json', JSON.stringify(players));
 
         // Schedule the next check based on the player's interval
-        setTimeout(() => runStakeoutChecking(index, key_pos + 1), waitTime * 1000);
+        setTimeout(() => runStakeoutChecking(index, key_pos + 1), waitTime);
     } catch (error) {
         console.error(`An error occurred for player ${index}: ${error.message}\n${error.stack}`);
         client.channels.cache.get(bot.channel_error).send({ content: `Error in runStakeoutChecking ${index}: ${error.message}\n${error.stack}` });
@@ -2324,11 +2324,11 @@ const commands = [
 		  		.setRequired(true))
 	  	.addIntegerOption(option =>
 			option.setName('value')
-		  		.setDescription('Stakeout value\n1 - Is Okay\n2 - Hosp\n3 - Travel\n4 - Status Change\n5 - Life Change')
+		  		.setDescription('Stakeout Check value: 1 - Is Okay, 2 - Hosp, 3 - Travel, 4 - Status Change, 5 - Life Change')
 		  		.setRequired(true))
 		.addIntegerOption(option =>
 			option.setName('interval')
-				.setDescription('Check Interval')
+				.setDescription('Check Interval (seconds)')
 				.setRequired(true))
 		.addRoleOption(option => 
 			option.setName('role')
