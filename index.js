@@ -201,6 +201,8 @@ let users = require('./users.json'); // users list
 let RW = require('./RW.json'); // RW list
 let pingedUser = require('./pingedUser.json'); // "1441750" : [value, time];
 
+let pingedStalklist = {};
+
 let bot_pause = 0;
 let count_calls = 0;
 let temp_keys = {};
@@ -479,7 +481,7 @@ async function sendPingStakeout(text, index, value, data){
 		)
 		.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
 	
-    client.channels.cache.get(bot.channel_stakeout).send({ content: `${players[index].tracking.role} ${data.name} ${data.last_action.status} ${data.status.state} Comment: ${players[index].tracking.comment}`, embeds: [status] });
+    client.channels.cache.get(players[id].tracking.channel).send({ content: `${players[index].tracking.role} ${data.name} ${data.last_action.status} ${data.status.state} Comment: ${players[index].tracking.comment}`, embeds: [status] });
 }
 
 
@@ -565,8 +567,14 @@ async function stakeoutChecking(index, key_id) {
 					}
 					// Hosp Time Ending
 					if((data.status.until - currdate) <= 180){
-						let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
-                    	sendPingStakeout(text, index, 2, data);
+						if(pingedStalklist.hasOwnProperty(index) && (currdate - 180 <= pingedStalklist[index])){
+							// already pinged
+						}
+						else{
+							let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+							sendPingStakeout(text, index, 2, data);
+							pingedStalklist[index] = currdate;
+						}
 					}
 				}
 
@@ -2570,13 +2578,33 @@ client.on('interactionCreate', async interaction => {
 		tmp_player.data["tracking"]['comment'] = comment;
 		tmp_player.data["tracking"]['interval'] = interval;
 		tmp_player.data["tracking"]['role'] = role;
-		
+
 		players[id] = tmp_player.data;
+	
+		interaction.reply({content: `Added player to stakeout ${tmp_player.data.name} by ${interaction.user.toString()}, condition: ${value}.`, ephemeral: true });
+
+		if(options.getRole('role')){
+			let channel2 = client.channels.cache.get(bot.channel_stakeout);
+			players[id]["tracking"]['channel'] = channel2.id;
+		}
+		else{
+			let channel2 = client.channels.cache.get(bot.channel_stakeout);
+			const thread = await channel2.threads.create({
+				name: `Stakeout ${tmp_player.data.name} by ${interaction.user.username}`, // Thread name
+				autoArchiveDuration: 1440, // Auto-archive after 1 hour (can be 60, 1440, 4320, or 10080 minutes)
+				type: ChannelType.PrivateThread, // Public thread (or use ChannelType.PublicThread)
+				reason: "User requested a new thread",
+			});
+
+			await thread.members.add(interaction.user.id);
+	
+			players[id]["tracking"]['channel'] = thread.id;
+		}
+
 		fs.writeFileSync('players.json', JSON.stringify(players));
 
 		runStakeoutChecking(id, 0);
-		return interaction.reply({content: `Added player to stakeout ${tmp_player.data.name} by ${interaction.user.toString()}, condition: ${value}.`, ephemeral: true })
-
+		return;
 	}
 	
 	else if (commandName === 'remove_stakeout') {
