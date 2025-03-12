@@ -4,63 +4,86 @@ const fs = require("fs");
 //let listings = require('./listings.json');
 
 const axios = require('axios');
-let factions = require('./factions_list.json');
-let temp = [];
+let items = require('./items.json');
 
-async function fetchFactions() {
-        let count = 0;
+let index = "656";
+currdate = parseInt(Date.now()/1000);
 
-        for (let fac_id of factions){
-                let currDate = Date.now();
-                const url = `https://api.torn.com/v2/faction/${fac_id}?selections=members&key=ircvQNWi6Hu0YGYW`;
-                try {
-                        //console.log(`Checking ${url}`);
-                        const response = await axios.get(url, { timeout: 15000 });
-                        //console.log(`Received API response`);
+let data = {};
+let offset = false;
+let error2 = false;
 
-                        if (!response.data) {
-                                console.log(`\n\nError: ${url}\n\n`);
-                                continue;
+let url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&from=${currdate}&key=1sAC1HakJor6P16m`;
+
+async function fetchAPI() {
+        do {
+                let temp = {};
+                temp['error'] = 0;
+                temp['data'] = {};
+                console.log("Fetching: ", url);
+                const response = await axios.get(url, { timeout: 15000 });
+                //console.log(response.data);
+                temp.data = response.data;
+                if(temp['error'] === 0 && Object.keys(temp['data']).length){
+                        if(temp.data.itemmarket.listings.length === 0 && (listings.hasOwnProperty(index) && Object.keys(listings[index]).length !== 0)){
+                                //client.channels.cache.get(bot.channel_logs).send({ content:`${RW[index]} [${index}] returned 0 listings. Skipping check.` });
+                                //return;
                         }
+                        if(Object.keys(data).length === 0){
+                                data = {...temp.data};
+                                //console.log("Data: ", data);
+                        }
+                        else{
+                                data.itemmarket.listings.push(...temp.data.itemmarket.listings);
+                                //console.log("Data 2: ", data);
+                        }
+                        if(temp.data._metadata.next){
+                                offset = true;
+                                url = `https://api.torn.com/v2/market/${index}/itemmarket?&bonus=Any&offset=${Object.keys(data.itemmarket.listings).length - 5}&from=${currdate}&key=1sAC1HakJor6P16m`;
+                                //console.log(index, data.itemmarket.item.name, url);
+                        }
+                        else{
+                                offset = false;
+                        }
+                }
+                else{
+                        error2 = true;
+                        offset = false;
+                }
+        } while(offset);
+        
+        data = data.itemmarket;
 
-                        if (response.data.error) {
-                                console.log(`\n\nError: ${url}\n${response.data}\n\n`);
-                                continue;
-                        }
-                        let valid_member = 0;
-
-                        for (let member of response.data.members) {
-                                if (member.status.state === 'Federal') {
-                                        continue;
-                                }
-                                //console.log(currDate, member.last_action.timestamp);
-                                if(currDate/1000 - member.last_action.timestamp > 24*60*60){
-                                        continue;
-                                }
-                                valid_member++;
-                        }
-                        if(valid_member >= 10){
-                                //console.log(`Valid Faction ${fac_id}`);
-                                temp.push(fac_id);
-                        }
-                        // Add a delay to avoid rate-limiting issues
-                        await new Promise(resolve => setTimeout(resolve, 500));
-
-                        if(++count % 10 === 0){
-                                console.log(`Checked ${count}/${factions.length} factions @ ${new Date(currDate).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}.`)
-                        }
-                } catch (error) {
-                        console.error(`Request failed: ${url}\n`, error.message);
+        console.log(data);
+        
+        if(data && Object.keys(data).length > 0 && !error2){
+                //checkCheapRW(index, data);
+                console.log(items[index]?.minimum);
+                console.log(data.listings[0]?.price);
+                /*
+                if(((items[index]?.minimum * 0.75) - data.listings[0]?.price) >= 0){
+                        let payload = {
+                                message: 'Cheap Listing RW',
+                                itemID: index,
+                                UID: data.listings[0].itemDetails.uid || 0,
+                                itemName: data.itemmarket.item.name,
+                                price: data.listings[0].price
+                        };
+                        broadcast(payload);
+                }
+                */
+        
+                for (let itm of data.listings){
+                        console.log(itm);
                 }
         }
 
-        console.log(temp.length);
-        console.log('Done');
-        fs.writeFileSync('factions_list.json', JSON.stringify(temp));
+        console.log("DONE");
 }
 
 // Run the function
-fetchFactions();
+fetchAPI();
+
 
 
 //let listings = require('./listings.json');

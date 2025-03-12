@@ -571,7 +571,7 @@ async function stakeoutChecking(index, key_id) {
 							// already pinged
 						}
 						else{
-							let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+							let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until * 1000).toISOString().replace('T', ' ')} -> ${new Date(data.status.until * 1000).toISOString().replace('T', ' ')} TCT`;
 							sendPingStakeout(text, index, 2, data);
 							pingedStalklist[index] = currdate;
 						}
@@ -592,7 +592,7 @@ async function stakeoutChecking(index, key_id) {
 				}
 
 				players[index].last_action = data.last_action;
-				players[index].state = data.status.state;
+				players[index].status = data.status.state;
 				players[index].life = data.life;
         
             } else{
