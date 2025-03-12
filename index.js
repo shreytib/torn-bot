@@ -441,7 +441,11 @@ async function predictStat(data){
 	return text;
 }
 
-async function sendPingStakeout(text, data){
+async function sendPingStakeout(text, index, value, data){
+	if(!players[index].tracking.value.toString().includes(value.toString())){
+		return;
+	}
+
     let color;
     switch(data.last_action.status){
         case "Online": color = "#0ca60c"; break;
@@ -465,23 +469,19 @@ async function sendPingStakeout(text, data){
 			Last action: ${data.last_action.relative}`
 		)
 		.addFields(
-			{ name: 'Xanax', value: `${data.personalstats.drugs.xanax}`, inline: true },
+			{ name: 'Xanax', value: `${players[index].stats.xanax}`, inline: true },
 			{ name: ' ', value: ` `, inline: true },
-			{ name: 'LSD', value: `${data.personalstats.drugs.lsd}`, inline: true },
-			{ name: 'SEs', value: `${data.personalstats.items.used.stat_enhancers}`, inline: true },
+			{ name: 'LSD', value: `${players[index].stats.LSD}`, inline: true },
+			{ name: 'SEs', value: `${players[index].stats.SEs}`, inline: true },
 			{ name: ' ', value: ` `, inline: true },
-			{ name: 'ELO', value: `${data.personalstats.attacking.elo}`, inline: true }
+			{ name: 'ELO', value: `${players[index].stats.ELO}`, inline: true }
 		)
 		.addFields(
-			{ name: 'STAT ESTIMATE', value: `${await predictStat(data)}`, inline: true }
+			{ name: 'STAT ESTIMATE', value: `${players[index].stats.estimate}`, inline: true }
 		)
 		.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
 	
-    let pings = ``;
-    for(let i in players[index].tracking){
-        pings += `\n<@${i}> Target ${players[index].name} [${index}] update! Comment: ${players[index].tracking[i].comment}`
-    }
-    client.channels.cache.get(bot.channel_stakeout).send({ content: `${pings} ${data.name} ${data.last_action.status} ${data.status.state}`, embeds: [status] });
+    client.channels.cache.get(bot.channel_stakeout).send({ content: `${players[index].tracking.role} ${data.name} ${data.last_action.status} ${data.status.state} Comment: ${players[index].tracking.comment}`, embeds: [status] });
 }
 
 
@@ -494,7 +494,7 @@ async function stakeoutChecking(index, key_id) {
 	data['error'] = 1;
 	data['data'] = {};
 
-    let url = `https://api.torn.com/v2/user/${index}?selections=profile,personalstats&cat=all&from=${currdate}&key=${keys[key_id].key}`;
+    let url = `https://api.torn.com/v2/user/${index}?selections=profile&from=${currdate}&key=${keys[key_id].key}`;
 
     data = await APICall(url, key_id);
 	callsStakeout++;
@@ -503,77 +503,90 @@ async function stakeoutChecking(index, key_id) {
         data = data.data;
         try{
             if(data.status.state === "Federal"){
+				let role = players[index].tracking.role;
                 delete players[index];
                 console.log(`Removed ${data.name}[${index}] from stakeout since in federal jail.`);
                 client.channels.cache.get(bot.channel_logs).send({ content: `Removed ${data.name}[${index}] from stakeout since in federal jail at: ${new Date()}` });
-                client.channels.cache.get(bot.channel_stakeout).send({ content: `${data.name}[${index}] is in Federal Jail. Removed from stakeout.` });
+                client.channels.cache.get(bot.channel_stakeout).send({ content: `<@&${role}> ${data.name}[${index}] is in Federal Jail. Removed from stakeout.` });
                 return;
             }
             
             if(data.status && ['Traveling', 'Hospital', 'Jail', 'Abroad', 'Okay'].includes(data.status.state)){
 
-                if(data.last_action.status !== players[index].last_action_status){
+                if(data.last_action.status !== players[index].last_action.status){
                     // handle ping
                     let text = `Status change for ${data.name}[${index}]: ${players[index].last_action_status} -> ${data.last_action.status}`;
-                    console.log(text);
-                    sendPingStakeout(text, data);
-
-                    players[index].last_action_status = data.last_action.status;
+                    sendPingStakeout(text, index, 4, data);
                 }
 
-                if(data.status.state !== players[index].state){
-                    // Went to Hosp
-                    if(data.status.state === "Hospital"){
-                        // handle ping
-                        let text = `User ${data.name}[${index}] is in the hospital. ${data.status.description}`;
-                        console.log(text);
-                        //sendPingStakeout(text, data);
+                if(data.status.state !== players[index].status.state){
+                    // Is now Okay
+                    if(data.status.state === "Okay"){
+						let text = `State change for ${data.name}[${index}] is now **Okay**\n${players[index].status.state} -> ${data.status.state}`;
+                    	sendPingStakeout(text, index, 1, data);
                     }
-                    
-                    // Started Travelling
-                    if(data.status.description.includes("Traveling")){
-                        // handle ping
-                        let text = `User ${data.name}[${index}] started travelling. ${data.status.description}`;
-                        console.log(text);
-                        sendPingStakeout(text, data);
+
+                    // Went to Hosp
+                    else if(data.status.state === "Hospital"){
+                        let text = `State change for ${data.name}[${index}] is now **in Hospital**\n${players[index].status.state} -> ${data.status.state}`;
+                    	sendPingStakeout(text, index, 2, data);
                     }
 
                     // Landed Abroad
-                    if(data.status.state === "Abroad"){
+                    else if(data.status.state === "Abroad"){
                         // handle ping
-                        let text = `User ${data.name}[${index}] landed abroad. ${data.status.description}`;
-                        console.log(text);
-                        sendPingStakeout(text, data);
+                        let text = `State change for ${data.name}[${index}] has now **landed Abroad**\n${players[index].status.description} -> ${data.status.description}`;
+                        sendPingStakeout(text, index, 3, data);
                     }
 
-                    // Started Returning
-                    if(data.status.description.includes("Returning")){
-                        // handle ping
-                        let text = `User ${data.name}[${index}] started returning. ${data.status.description}`;
-                        console.log(text);
-                        sendPingStakeout(text, data);
-                    }
-
-                    // Is Okay
-                    if(data.status.state === "Okay"){
-                        // handle ping
-                        let text = `User ${data.name}[${index}] is now Okay.`;
-                        console.log(text);
-                        sendPingStakeout(text, data);
-                    }
-
-
-                    players[index].state = data.status.state;
-                }
-                
-                /*
-                if(data.status.state === 'Hospital'){
-                    if((data.status.until - currdate) < 120){
-                        // console.log(`${data.name} skipped, too long in hospital ${Math.ceil((data.status.until - currdate)/60)} minutes`);
-                        return;
+                    else if(data.status.state === "Traveling"){
+						// Started Travelling
+                        if(data.status.description.includes("Traveling")){
+							let text = `State change for ${data.name}[${index}] has now **started Traveling**\n${players[index].status.state} -> ${data.status.description}`;
+                        	sendPingStakeout(text, index, 3, data);
+						}
+	
+						// Started Returning
+						else if(data.status.description.includes("Returning")){
+							let text = `State change for ${data.name}[${index}] has now **started Returning**\n${players[index].status.description} -> ${data.status.description}`;
+                        	sendPingStakeout(text, index, 3, data);
+						}
                     }
                 }
-                */
+
+				if(data.status.state === "Hospital" && players[index].status.state === "Hospital"){
+					// Hosp End Time Reduce
+					if(players[index].status.until > data.status.until){
+						let text = `Hospital End Time Reduced ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+                    	sendPingStakeout(text, index, 2, data);
+					}
+					// Hosp End Time Increase
+					if(players[index].status.until < data.status.until){
+						let text = `Hospital End Time Increased ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+                    	sendPingStakeout(text, index, 2, data);
+					}
+					// Hosp Time Ending
+					if((data.status.until - currdate) <= 180){
+						let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+                    	sendPingStakeout(text, index, 2, data);
+					}
+				}
+
+				if(data.life.current !== players[index].life.current){
+					// Life Reduce
+					if(data.life.current < players[index].life.current){
+						let text = `Life Reduced ${data.name}[${index}]\n${players[index].life.current} -> ${data.life.current}`;
+                    	sendPingStakeout(text, index, 5, data);
+					}
+					// Life Increase
+					if(data.life.current > players[index].life.current && data.life.ticktime <= players[index].life.ticktime){
+						let text = `Life Increased ${data.name}[${index}]\n${players[index].life.current} -> ${data.life.current}`;
+                    	sendPingStakeout(text, index, 5, data);
+					}
+				}
+
+				players[index].last_action = data.last_action;
+				players[index].state = data.status.state;
         
             } else{
                 console.error('Unexpected response structure:', data.status);
@@ -1078,6 +1091,96 @@ async function checkCheapRW(index, data) {
 	
 }
 
+async function moneyChecking(i, data = null){
+	if(!data){
+		data = users[i].lastAPICall;
+	}
+	let timestamp = parseInt(Date.now()/1000);
+	let onHand = users[i].soldValue;
+	if(onHand < 35000000){
+		// not enough for ping
+		if(Object.keys(users[i].items).length === 0){
+			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
+			delete users[i];
+		}
+		return;
+	}
+	if(pingedUser.hasOwnProperty(i) && (pingedUser[i][0] >= onHand || timestamp - 180 <= pingedUser[i][1])){
+		// already pinged
+		return;
+	}
+
+	if(['Okay', 'Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.until - 180 <= timestamp)){
+		//handlePing
+		let payload = {
+			message: 'RW Sale',
+			userID: i,
+			money: onHand,
+		};
+		broadcast(payload);
+		
+		let color;
+		switch(data.last_action.status){
+			case "Online": color = "#0ca60c"; break;
+			case "Idle": color = "#e37d10"; break;
+			default: color = "#ccc8c8"; break;
+		}
+	
+		let status = new EmbedBuilder();
+
+		let text = `
+				${users[i].factionName} [${users[i].factionID}]
+				**${data.last_action.status} & ${data.status.state === 'Hospital' ? `Is leaving hospital <t:${data.status.until}:R>\n` : `${data.status.state}`}**
+				
+				**CASH ON HAND = ${shortenNumber(onHand)}**
+
+				ITEMS SOLD:`;
+		
+		for(let j in users[i].soldItems){
+			text = `${text}\n${JSON.stringify(users[i].soldItems[j])}`;
+		}
+
+		text = `${text}\n\nLast action: ${data.last_action.relative}`;
+		
+		status.setTitle(users[i].name + " [" + i + "]")
+			.setColor(color)
+			.setURL('https://www.torn.com/loader.php?sid=attack&user2ID=' + i)
+			.setDescription(text)
+			.addFields(
+				{ name: 'Xanax', value: `${data.personalstats.drugs.xanax}`, inline: true },
+				{ name: ' ', value: ` `, inline: true },
+				{ name: 'LSD', value: `${data.personalstats.drugs.lsd}`, inline: true },
+				{ name: 'SEs', value: `${data.personalstats.items.used.stat_enhancers}`, inline: true },
+				{ name: ' ', value: ` `, inline: true },
+				{ name: 'ELO', value: `${data.personalstats.attacking.elo}`, inline: true }
+			)
+			.addFields(
+				{ name: 'STAT ESTIMATE', value: `${await predictStat(data)}`, inline: true }
+			)
+			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
+		
+		if(data.faction.faction_id === 16628){
+			if([1441750, 179208].includes(data.player_id)){
+				// skip
+			}
+			else{
+				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+			}
+		}
+		else{
+			client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
+		}
+		
+		//client.channels.cache.get(bot.channel_logs).send({ content: `${users[i].name}[${i}] has ${onHand} on hand. ${users[i].status} & ${users[i].state}. Last action: ${users[i].lastAPICall.last_action.relative}`});
+
+		pingedUser[i] = [onHand, timestamp];
+		if(Object.keys(users[i].items).length === 0){
+			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
+			delete users[i];
+		}
+	}
+}
+
 
 
 
@@ -1336,22 +1439,22 @@ async function addPlayer(id){
     let keys_list = Object.keys(keys);
     let randomIndex = Math.floor(Math.random() * keys_list.length);
     let key_id = keys_list[randomIndex];
-    let url = `https://api.torn.com/v2/user/${id}?selections=profile&key=${keys[key_id].key}`;
+    let url = `https://api.torn.com/v2/user/${id}?selections=profile,personalstats&cat=all&key=${keys[key_id].key}`;
 
     let data = await APICall(url, key_id);
 
     if(data["error"] === 0){
         pObj["name"] = data.data.name;
         pObj["id"] = id;
-        pObj["life"] = data.data.life.current;
-        pObj["state"] = data.data.status.state;
-        pObj["description"] = data.data.status.description;
-        pObj["last_action_status"] = data.data.last_action.status;
-        pObj["last_action_timestamp"] = data.data.last_action.timestamp;
-        pObj["track_start"] = performance.now();
-        pObj["travel_start"] = 0;
-        pObj["travel_land"] = 0;
-        pObj["travel_end"] = 0;
+        pObj["life"] = data.data.life;
+        pObj["status"] = data.data.status;
+        pObj["last_action"] = data.data.last_action;
+		pObj['stats'] = {};
+		pObj['stats']['xanax'] = data.personalstats.drugs.xanax;
+		pObj['stats']['LSD'] = data.personalstats.drugs.lsd;
+		pObj['stats']['SEs'] = data.personalstats.items.used.stat_enhancers;
+		pObj['stats']['ELO'] = data.personalstats.attacking.elo;
+		pObj['stats']['estimate'] = await predictStat(data);
 
         data.data = pObj;
     }
@@ -1421,128 +1524,39 @@ async function addProtection(id, value, key){
 
 
 
-async function moneyChecking(i, data = null){
-	if(!data){
-		data = users[i].lastAPICall;
-	}
-	let timestamp = parseInt(Date.now()/1000);
-	let onHand = users[i].soldValue;
-	if(onHand < 35000000){
-		// not enough for ping
-		if(Object.keys(users[i].items).length === 0){
-			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
-			delete users[i];
+
+
+
+async function runStakeoutChecking(index, key_pos){
+	try {
+		let start = performance.now();
+		if(!players.hasOwnProperty(index)){
+			return;
 		}
-		return;
-	}
-	if(pingedUser.hasOwnProperty(i) && (pingedUser[i][0] >= onHand || timestamp - 180 <= pingedUser[i][1])){
-		// already pinged
-		return;
-	}
-
-	if(['Okay', 'Traveling', 'Abroad'].includes(data.status.state) || (data.status.state === 'Hospital' && data.status.until - 180 <= timestamp)){
-		//handlePing
-		let payload = {
-			message: 'RW Sale',
-			userID: i,
-			money: onHand,
-		};
-		broadcast(payload);
-		
-		let color;
-		switch(data.last_action.status){
-			case "Online": color = "#0ca60c"; break;
-			case "Idle": color = "#e37d10"; break;
-			default: color = "#ccc8c8"; break;
-		}
-	
-		let status = new EmbedBuilder();
-
-		let text = `
-				${users[i].factionName} [${users[i].factionID}]
-				**${data.last_action.status} & ${data.status.state === 'Hospital' ? `Is leaving hospital <t:${data.status.until}:R>\n` : `${data.status.state}`}**
-				
-				**CASH ON HAND = ${shortenNumber(onHand)}**
-
-				ITEMS SOLD:`;
-		
-		for(let j in users[i].soldItems){
-			text = `${text}\n${JSON.stringify(users[i].soldItems[j])}`;
-		}
-
-		text = `${text}\n\nLast action: ${data.last_action.relative}`;
-		
-		status.setTitle(users[i].name + " [" + i + "]")
-			.setColor(color)
-			.setURL('https://www.torn.com/loader.php?sid=attack&user2ID=' + i)
-			.setDescription(text)
-			.addFields(
-				{ name: 'Xanax', value: `${data.personalstats.drugs.xanax}`, inline: true },
-				{ name: ' ', value: ` `, inline: true },
-				{ name: 'LSD', value: `${data.personalstats.drugs.lsd}`, inline: true },
-				{ name: 'SEs', value: `${data.personalstats.items.used.stat_enhancers}`, inline: true },
-				{ name: ' ', value: ` `, inline: true },
-				{ name: 'ELO', value: `${data.personalstats.attacking.elo}`, inline: true }
-			)
-			.addFields(
-				{ name: 'STAT ESTIMATE', value: `${await predictStat(data)}`, inline: true }
-			)
-			.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')} TCT` });
-		
-		if(data.faction.faction_id === 16628){
-			if([1441750, 179208].includes(data.player_id)){
-				// skip
-			}
-			else{
-				client.channels.cache.get(bot.channel_helphosp).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
-			}
-		}
-		else{
-			client.channels.cache.get(bot.channel_sales).send({ content: `<@&${bot.role_sales}>`, embeds: [status] });
-		}
-		
-		//client.channels.cache.get(bot.channel_logs).send({ content: `${users[i].name}[${i}] has ${onHand} on hand. ${users[i].status} & ${users[i].state}. Last action: ${users[i].lastAPICall.last_action.relative}`});
-
-		pingedUser[i] = [onHand, timestamp];
-		if(Object.keys(users[i].items).length === 0){
-			console.log(`\nUser ${users[i].name} [${i}] has no items for sale. Deleting.\n`)
-			delete users[i];
-		}
-	}
-}
-
-
-
-
-async function runStakeoutChecking(count){
-	callsStakeout = 0;
-	let elapsedTime = 0.0;
-	let start = performance.now();
-	
-	let promises = [];
-	//console.log(`i, count, pos, key, holder`);
-	let key_pos = count;
-	let keys_list = Object.keys(keys);
-
-	let key_id = '';
-
-	for (let i in players){
+		let keys_list = Object.keys(keys);
 		if (key_pos >= keys_list.length) { key_pos = 0; }
-		key_id = keys_list[key_pos].toString();
-		promises.push(stakeoutChecking(i, key_id));
-		++key_pos;
-	}
+		let key_id = keys_list[key_pos].toString();
 
-	await Promise.all(promises);
+        await stakeoutChecking(index, key_id);
 
-	minTimeStakeout = Math.max(2, 60/ (100/ Math.max(1, callsStakeout))) * 1000; // either every 2 seconds, or upto 100 calls per minute
-	lastCallsStakeout = callsStakeout;
-	
-	let end = performance.now(); // Record end time
-    elapsedTime = Math.round(end - start); // Calculate elapsed time
-    console.log(`[ Stakeouts ] x${Object.keys(players).length} Wait Time: ${minTimeStakeout}, Last Run Calls: ${lastCallsStakeout} at:`, new Date(), `in ${elapsedTime} miliseconds.`);
+		let end = performance.now(); // Record end time
+    	let elapsedTime = Math.round(end - start); // Calculate elapsed time
+		let waitTime = Math.max(0, players[index].tracking.interval - elapsedTime);
 
-	fs.writeFileSync('players.json', JSON.stringify(players));
+        console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime} seconds.`);
+
+        // Schedule the next check based on the player's interval
+        setTimeout(() => runStakeoutChecking(index, key_pos + 1), waitTime * 1000);
+    } catch (error) {
+        console.error(`An error occurred for player ${index}: ${error.message}\n${error.stack}`);
+        client.channels.cache.get(bot.channel_error).send({ content: `Error in runStakeoutChecking ${index}: ${error.message}\n${error.stack}` });
+
+		if(!players.hasOwnProperty(index)){
+			return;
+		}
+        // Retry after a default time in case of failure
+        setTimeout(() => runStakeoutChecking(index, key_pos + 1), players[index].tracking.interval * 1000);
+    }
 }
 
 async function runProtectionChecking(){
@@ -1646,57 +1660,11 @@ async function runRWChecking(count){
 
 
 
+
+
+
+
 const StartLoop = async () => {
-
-	const manageCheckStakeout = async () => {
-		try{
-			let runloop = 0;
-            async function GetDatStakeout() {
-				try {
-					if(count_calls >= 900){
-						await sleep(10 * 1000);
-					}
-					const startTime = Date.now(); // Record the start time
-					//console.log("Starting Loop players at: ", new Date());
-
-					// Call your function and wait for it to complete
-					await runStakeoutChecking(runloop);
-		
-					if(bot_pause >= 100){
-						console.log(`API disabled. Stakeouts paused for 1 minute at:`, new Date());
-						await sleep(60 * 1000);
-						bot_pause = 0;
-					}
-					
-					const endTime = Date.now(); // Record the end time
-					const elapsedTime = endTime - startTime; // Calculate elapsed time
-		
-					// Update runloop
-					runloop = (runloop >= Object.keys(keys).length - 1) ? 0 : runloop + 1;
-					
-					const waitTime = Math.max(minTimeStakeout - elapsedTime, 0);
-		
-					// Recur to the next iteration of GetDatStakeout
-					setTimeout(() => {
-						GetDatStakeout();
-					}, waitTime);
-				} catch (error) {
-					console.error(`An error occurred: ${error.message}\n${error.stack}`);
-					client.channels.cache.get(bot.channel_error).send({ content:`An error occurred in PLAYERS LOOP (1): ${error.message}\n${error.stack}` });
-					// Optionally, handle the error (e.g., retry the function or exit the loop)
-				}
-			}
-			
-			// Start the loop
-			await GetDatStakeout();
-		}
-		catch(error){
-			console.log(`ERROR IN PLAYERS LOOP: ${error.message}\n${error.stack}`);
-			client.channels.cache.get(bot.channel_error).send({ content: `ERROR IN PLAYERS LOOP: ${error.message}\n${error.stack}` });
-			await sleep(60 * 1000);
-			manageCheckStakeout();
-		}
-	};
 
 	const manageCheckProtection = async () => {
 		try{
@@ -1844,11 +1812,16 @@ const StartLoop = async () => {
 	};
 
 	const outputApiCallsCount = async () => {
-		while (true) {
-			await sleep(60 * 1000);
-			console.log(`\nLast minute API calls count: ${count_calls}; at: ${new Date()}\n`);
-			count_calls = 0;
-		}
+		console.log(`.\nLast minute API calls count: ${count_calls}; at: ${new Date()}\n.`);
+		count_calls = 0;
+		setTimeout(() => outputApiCallsCount(), 60 * 1000);
+	};
+
+	const outputStakeoutCallsCount = async () => {
+		console.log(`Last minute StakeOut calls count: ${callsStakeout}; at: ${new Date()}`);
+		lastCallsStakeout = callsStakeout;
+		callsStakeout = 0;
+		setTimeout(() => outputStakeoutCallsCount(), 60 * 1000);
 	};
 	
 	const resetTempInvalidKeys = async () => {
@@ -1909,13 +1882,13 @@ const StartLoop = async () => {
 
 	// Start loops concurrently
 	//manageStalkList();
-	manageCheckStakeout();
 	manageCheckProtection();
 	await sleep(2000);
 	manageCheckUser();
 	await sleep(2000);
 	manageCheckRW();
 	outputApiCallsCount();
+	outputStakeoutCallsCount();
 	resetTempInvalidKeys();
 
 };
@@ -2348,12 +2321,20 @@ const commands = [
 		  		.setRequired(true))
 	  	.addIntegerOption(option =>
 			option.setName('value')
-		  		.setDescription('Stakeout value')
+		  		.setDescription('Stakeout value\n1 - Is Okay\n2 - Hosp\n3 - Travel\n4 - Status Change\n5 - Life Change')
 		  		.setRequired(true))
-	  	.addStringOption(option =>
+		.addIntegerOption(option =>
+			option.setName('interval')
+				.setDescription('Check Interval')
+				.setRequired(true))
+		.addRoleOption(option => 
+			option.setName('role')
+				.setDescription('The role to ping')
+				.setRequired(false))
+		.addStringOption(option =>
 			option.setName('comment')
-		  		.setDescription('Comment')
-		  		.setRequired(false)),
+				.setDescription('Comment')
+				.setRequired(false)),
   
 	new SlashCommandBuilder()
 	  	.setName('remove_stakeout')
@@ -2564,21 +2545,12 @@ client.on('interactionCreate', async interaction => {
 	if (commandName === 'add_stakeout') {
 		const id = options.getInteger('id');
 		const value = options.getInteger('value');
+		const interval = options.getInteger('interval');
 		const comment = options.getString('comment') || '';
+		const role = options.getRole('role') ? options.getRole('role').toString() : interaction.user.toString();
 
 		if(players.hasOwnProperty(id)){
-            if(players[id].tracking.hasOwnProperty(interaction.user.id)){
-                players[id]["tracking"][interaction.user.id]['value'] = value;
-				players[id]["tracking"][interaction.user.id]['comment'] = comment;
-                fs.writeFileSync('players.json', JSON.stringify(players));
-			    return interaction.reply({content: `Updated stakeout criteria/ comment for ${players[id].name}, tracking by <@${message.author.id}>, new condition: ${value}.`, ephemeral: true });
-            }
-            else{
-                players[id]["tracking"][interaction.user.id]['value'] = value;
-				players[id]["tracking"][interaction.user.id]['comment'] = comment;
-                fs.writeFileSync('players.json', JSON.stringify(players));
-			    return interaction.reply({content: `Player ${players[id].name} already being tracked. Added another stakeout criteria by <@${message.author.id}>, condition: ${value}.`, ephemeral: true });
-            }
+			return interaction.reply({content: `Player ${players[id].name} [${id}] already being tracked by ${players[id].tracking.id}, on condition: ${players[id].tracking.value}. Comment: ${players[id].tracking.comment}`, ephemeral: true });
 		}
 		
 		let tmp_player = {};
@@ -2590,13 +2562,17 @@ client.on('interactionCreate', async interaction => {
         }
 
         tmp_player.data["tracking"] = {};
-        tmp_player.data["tracking"][interaction.user.id] = {};
-		tmp_player.data["tracking"][interaction.user.id]['value'] = value;
-		tmp_player.data["tracking"][interaction.user.id]['comment'] = comment;
+        tmp_player.data["tracking"]['id'] = interaction.user.toString();
+		tmp_player.data["tracking"]['value'] = value;
+		tmp_player.data["tracking"]['comment'] = comment;
+		tmp_player.data["tracking"]['interval'] = interval;
+		tmp_player.data["tracking"]['role'] = role;
 		
 		players[id] = tmp_player.data;
 		fs.writeFileSync('players.json', JSON.stringify(players));
-		return interaction.reply({content: `Added player to stakeout ${tmp_player.data.name} by <@${interaction.user.id}>, condition: ${value}.`, ephemeral: true })
+
+		runStakeoutChecking(id, 0);
+		return interaction.reply({content: `Added player to stakeout ${tmp_player.data.name} by ${interaction.user.toString()}, condition: ${value}.`, ephemeral: true })
 
 	}
 	
