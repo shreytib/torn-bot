@@ -1041,13 +1041,13 @@ async function checkCheapRW(index, data) {
 			bucks = 6;
 		}
 		else if(data.item.type === 'Primary' || data.item.type === 'Secondary'){
-			if(smalls.includes(data.item.name)){
+			if(smalls.includes(data.item.id.toString())){
 				bucks = 4;
 			}
-			else if(rifles.includes(data.item.name)){
+			else if(rifles.includes(data.item.id.toString())){
 				bucks = 10;
 			}
-			else if(HA.includes(data.item.name)){
+			else if(HA.includes(data.item.id.toString())){
 				bucks = 14;
 			}
 		}
@@ -1093,7 +1093,7 @@ async function checkCheapRW(index, data) {
 			}
 		}
 	} catch(error){
-		console.log(data);
+		client.channels.cache.get(bot.channel_error).send({ content: `Unexpected error in checkCheapRW: ${error.message}\n${error.stack}` });
 	}
 	
 }
