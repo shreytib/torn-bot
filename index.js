@@ -557,12 +557,12 @@ async function stakeoutChecking(index, key_id) {
 				if(data.status.state === "Hospital" && players[index].status.state === "Hospital"){
 					// Hosp End Time Reduce
 					if(players[index].status.until > data.status.until){
-						let text = `Hospital End Time Reduced ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+						let text = `Hospital End Time Reduced ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().slice(11, 19)} -> ${new Date(data.status.until).toISOString().slice(11, 19)} TCT`;
                     	sendPingStakeout(text, index, 2, data);
 					}
 					// Hosp End Time Increase
 					if(players[index].status.until < data.status.until){
-						let text = `Hospital End Time Increased ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().replace('T', ' ')} -> ${new Date(data.status.until).toISOString().replace('T', ' ')} TCT`;
+						let text = `Hospital End Time Increased ${data.name}[${index}] will now leave in <t:${data.status.until}:R>\n${new Date(players[index].status.until).toISOString().slice(11, 19)} -> ${new Date(data.status.until).toISOString().slice(11, 19)} TCT`;
                     	sendPingStakeout(text, index, 2, data);
 					}
 					// Hosp Time Ending
@@ -571,7 +571,7 @@ async function stakeoutChecking(index, key_id) {
 							// already pinged
 						}
 						else{
-							let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until * 1000).toISOString().replace('T', ' ')} -> ${new Date(data.status.until * 1000).toISOString().replace('T', ' ')} TCT`;
+							let text = `Hospital Ending ${data.name}[${index}] is **leaving Hospital** in <t:${data.status.until}:R>\n${new Date(players[index].status.until * 1000).toISOString().slice(11, 19)} -> ${new Date(data.status.until * 1000).toISOString().slice(11, 19)} TCT`;
 							sendPingStakeout(text, index, 2, data);
 							pingedStalklist[index] = currdate;
 						}
