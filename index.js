@@ -179,6 +179,7 @@ server.listen(8080, '0.0.0.0', () => {
 
 // Function to broadcast messages to connected clients
 function broadcast(data) {
+	console.log(`Received msg to broadcast: ${JSON.stringify(data)}`);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(data));
@@ -202,6 +203,7 @@ let RW = require('./RW.json'); // RW list
 let pingedUser = require('./pingedUser.json'); // "1441750" : [value, time];
 
 let pingedStalklist = {};
+let pingedUserCheapRW = {};
 
 let bot_pause = 0;
 let count_calls = 0;
@@ -1064,29 +1066,36 @@ async function checkCheapRW(index, data) {
 			}
 			let difference = (bucks2 * BBValue) - listing.price;
 			if(difference >= 0){
-				let payload = {
-					message: 'Cheap Listing RW',
-					itemID: index,
-					UID: listing.itemDetails.uid || 0,
-					itemName: data.item.name,
-					price: listing.price
-				};
-				broadcast(payload);
-				
-
-				let status = new EmbedBuilder();
-				status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
-					.setColor("#0ca60c")
-					.setURL(`https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${data.item.id}`)
-					.setDescription("CHEAPER THAN BUNKER")
-					.addFields(
-						{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
-						{ name: 'BB Val', value: `$${shortenNumber(bucks2 * BBValue)}`, inline: true },
-						{ name: 'Quantity', value: `${listing.amount}`, inline: true }
-					)
-					.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
-				
-				client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
+				if(pingedUserCheapRW.hasOwnProperty(index) && (pingedUserCheapRW[index][0] === listing.itemDetails.uid) && (parseInt(Date.now()/1000) - 180 <= pingedUserCheapRW[index][1])){
+					// already pinged
+				}
+				else{
+					pingedUserCheapRW[index] = [listing.itemDetails.uid, timestamp];
+					let payloadRW = {
+						message: 'Cheap Listing RW',
+						itemID: index,
+						UID: listing.itemDetails.uid || 0,
+						itemName: data.item.name,
+						price: listing.price
+					};
+					console.log(`Sending Cheap RW Listing: ${JSON.stringify(payloadRW)}`);
+					broadcast(payloadRW);
+					
+	
+					let status = new EmbedBuilder();
+					status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
+						.setColor("#0ca60c")
+						.setURL(`https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${data.item.id}`)
+						.setDescription("CHEAPER THAN BUNKER")
+						.addFields(
+							{ name: 'Price', value: `$${shortenNumber(listing.price)}`, inline: true },
+							{ name: 'BB Val', value: `$${shortenNumber(bucks2 * BBValue)}`, inline: true },
+							{ name: 'Quantity', value: `${listing.amount}`, inline: true }
+						)
+						.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
+					
+					client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
+				}
 			}
 			checkCheapRWcount++;
 			if(checkCheapRWcount >= 3){
