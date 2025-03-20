@@ -1094,7 +1094,7 @@ async function checkCheapRW(index, data) {
 						)
 						.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}` });
 					
-					client.channels.cache.get(bot.channel_cheapbuys).send({ content: bot.role_buy, embeds: [status] });
+					client.channels.cache.get(bot.channel_cheapbuys).send({ content: `<@&${bot.role_buy}>`, embeds: [status] });
 				}
 			}
 			checkCheapRWcount++;
@@ -1554,7 +1554,7 @@ async function runStakeoutChecking(index, key_pos){
     	let elapsedTime = Math.round(end - start); // Calculate elapsed time
 		let waitTime = Math.max(0, (players[index].tracking.interval * 1000 - elapsedTime));
 
-        console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime/1000} seconds.`);
+        //console.log(`[ Stakeout ] Player ${index} checked at `, new Date(), `. Next check in ${waitTime/1000} seconds.`);
 		fs.writeFileSync('players.json', JSON.stringify(players));
 
         // Schedule the next check based on the player's interval
