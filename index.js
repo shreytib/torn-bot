@@ -179,9 +179,13 @@ server.listen(8080, '0.0.0.0', () => {
 
 // Function to broadcast messages to connected clients
 function broadcast(data) {
-	console.log(`Received msg to broadcast: ${JSON.stringify(data)}`);
+	if(data.message !== 'New Listing'){
+		console.log(`Received msg to broadcast: ${JSON.stringify(data)}\nMembers: ${wss.clients.size}`);
+	}
+	
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
+			console.log("Sending data to client", data);
             client.send(JSON.stringify(data));
         }
     });
