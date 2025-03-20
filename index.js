@@ -1067,7 +1067,7 @@ async function checkCheapRW(index, data) {
 			}
 			let diff = (bucks2 * BBValue) - listing.price;
 			if(index === '30' && checkCheapRWcount === 0){
-				console.log(`Steyr AUG: Bucks {bucks2}. Listing:\n${listing}\n\nDifference: ${diff}`);
+				console.log(`Steyr AUG: Bucks ${bucks2}. Listing:\n${JSON.stringify(listing)}\n\nDifference: ${diff}`);
 			}
 			if(diff >= 0){
 				let payload = {
