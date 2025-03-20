@@ -179,13 +179,9 @@ server.listen(8080, '0.0.0.0', () => {
 
 // Function to broadcast messages to connected clients
 function broadcast(data) {
-	if(data.message !== 'New Listing'){
-		console.log(`Received msg to broadcast: ${JSON.stringify(data)}\nMembers: ${wss.clients.size}`);
-	}
 	
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-			console.log("Sending data to client", data);
             client.send(JSON.stringify(data));
         }
     });
@@ -1083,7 +1079,6 @@ async function checkCheapRW(index, data) {
 						itemName: data.item.name,
 						price: listing.price
 					};
-					console.log(`Sending Cheap RW Listing: ${JSON.stringify(payloadRW)}`);
 					broadcast(payloadRW);
 					
 	
