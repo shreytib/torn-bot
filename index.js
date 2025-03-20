@@ -1051,9 +1051,6 @@ async function checkCheapRW(index, data) {
 				bucks = 14;
 			}
 		}
-		if(bucks > 0 && index === '30'){
-			console.log(`Steyr AUG: Bucks ${bucks}`);
-		}
 		for (let listing of data.listings){
 			let bucks2 = bucks;
 			if(listing.itemDetails.rarity === 'orange'){
@@ -1066,16 +1063,12 @@ async function checkCheapRW(index, data) {
 				bucks2 *= 1.5;
 			}
 			let difference = (bucks2 * BBValue) - listing.price;
-			if(index === '30' && checkCheapRWcount === 0){
-				console.log(`Steyr AUG: Bucks ${bucks2}. Listing:\n${JSON.stringify(listing)}\n\nDifference: ${difference} Type: ${typeof difference}`);
-			}
 			if(difference >= 0){
-				console.log(`Steyr AUG: index: ${index} Diff ${difference}. Sending Ping`);
 				let payload = {
 					message: 'Cheap Listing RW',
 					itemID: index,
 					UID: listing.itemDetails.uid || 0,
-					itemName: data.itemmarket.item.name,
+					itemName: data.item.name,
 					price: listing.price
 				};
 				broadcast(payload);
