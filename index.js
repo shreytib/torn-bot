@@ -1078,6 +1078,9 @@ async function checkCheapRW(index, data) {
 					price: listing.price
 				};
 				broadcast(payload);
+				if(index === '30' && checkCheapRWcount === 0){
+					console.log(`Steyr AUG: Diff ${diff}. Sending Ping`);
+				}
 
 				let status = new EmbedBuilder();
 				status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
