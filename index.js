@@ -1041,15 +1041,18 @@ async function checkCheapRW(index, data) {
 			bucks = 6;
 		}
 		else if(data.item.type === 'Primary' || data.item.type === 'Secondary'){
-			if(smalls.includes(data.item.id.toString())){
+			if(smalls.includes(index)){
 				bucks = 4;
 			}
-			else if(rifles.includes(data.item.id.toString())){
+			else if(rifles.includes(index)){
 				bucks = 10;
 			}
-			else if(HA.includes(data.item.id.toString())){
+			else if(HA.includes(index)){
 				bucks = 14;
 			}
+		}
+		if(bucks > 0 && index === '30'){
+			console.log(`Steyr AUG: Bucks ${bucks}`);
 		}
 		for (let listing of data.listings){
 			let bucks2 = bucks;
@@ -1063,6 +1066,9 @@ async function checkCheapRW(index, data) {
 				bucks2 *= 1.5;
 			}
 			let diff = (bucks2 * BBValue) - listing.price;
+			if(index === '30' && checkCheapRWcount === 0){
+				console.log(`Steyr AUG: Bucks {bucks2}. Listing:\n${listing}\n\nDifference: ${diff}`);
+			}
 			if(diff >= 0){
 				let payload = {
 					message: 'Cheap Listing RW',
