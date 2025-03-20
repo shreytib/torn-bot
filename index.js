@@ -1070,11 +1070,12 @@ async function checkCheapRW(index, data) {
 			}
 			let difference = (bucks2 * BBValue) - listing.price;
 			if(difference >= 0){
-				if(pingedUserCheapRW.hasOwnProperty(index) && (pingedUserCheapRW[index][0] === listing.itemDetails.uid) && (parseInt(Date.now()/1000) - 180 <= pingedUserCheapRW[index][1])){
+				let timestampRW = parseInt(Date.now()/1000);
+				if(pingedUserCheapRW.hasOwnProperty(index) && (pingedUserCheapRW[index][0] === listing.itemDetails.uid) && (timestampRW - 180 <= pingedUserCheapRW[index][1])){
 					// already pinged
 				}
 				else{
-					pingedUserCheapRW[index] = [listing.itemDetails.uid, timestamp];
+					pingedUserCheapRW[index] = [listing.itemDetails.uid, timestampRW];
 					let payloadRW = {
 						message: 'Cheap Listing RW',
 						itemID: index,
