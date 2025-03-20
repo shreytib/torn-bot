@@ -1065,22 +1065,21 @@ async function checkCheapRW(index, data) {
 			if(listing.itemDetails.bonuses.length === 2){
 				bucks2 *= 1.5;
 			}
-			let diff = (bucks2 * BBValue) - listing.price;
+			let difference = (bucks2 * BBValue) - listing.price;
 			if(index === '30' && checkCheapRWcount === 0){
-				console.log(`Steyr AUG: Bucks ${bucks2}. Listing:\n${JSON.stringify(listing)}\n\nDifference: ${diff}`);
+				console.log(`Steyr AUG: Bucks ${bucks2}. Listing:\n${JSON.stringify(listing)}\n\nDifference: ${difference} Type: ${typeof difference}`);
 			}
-			if(diff >= 0){
+			if(difference >= 0){
+				console.log(`Steyr AUG: index: ${index} Diff ${difference}. Sending Ping`);
 				let payload = {
 					message: 'Cheap Listing RW',
-					itemID: data.item.id,
+					itemID: index,
 					UID: listing.itemDetails.uid || 0,
 					itemName: data.itemmarket.item.name,
 					price: listing.price
 				};
 				broadcast(payload);
-				if(index === '30' && checkCheapRWcount === 0){
-					console.log(`Steyr AUG: Diff ${diff}. Sending Ping`);
-				}
+				
 
 				let status = new EmbedBuilder();
 				status.setTitle(`${listing.amount}x ${data.item.name} [${data.item.id}]`)
