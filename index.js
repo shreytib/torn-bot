@@ -2705,7 +2705,7 @@ client.on('interactionCreate', async interaction => {
 		let keys_list = Object.keys(keys);
 		let randomIndex = Math.floor(Math.random() * keys_list.length);
 		let key_id = keys_list[randomIndex];
-		let url = `https://api.torn.com/v2/company/${id}?selections=companies&key=${keys[key_id].key}`;
+		let url = `https://api.torn.com/v2/company/20?selections=companies&key=${keys[key_id].key}`;
 
 		let response = await axios.get(url, { timeout: 5000 });
 
@@ -3189,6 +3189,8 @@ process.on('unhandledRejection', (reason, promise) => {
         content: `Unhandled Rejection: ${reason}`
     });
 });
+
+
 
 
 
