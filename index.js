@@ -1552,10 +1552,12 @@ async function checkCompany(id){
 		return await checkCompany(id);
 	}
 
+	console.log(response.data);
+
 	let currDate = parseInt(Date.now()/1000);
 
 	let players2Ping = [];
-	let data = response.data.employees;
+	let data = response.data.company.employees;
 
 	for (let i in data){
 		if(currDate - data[i].last_action.timestamp <= 60){
