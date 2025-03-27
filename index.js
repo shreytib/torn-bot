@@ -2713,7 +2713,7 @@ client.on('interactionCreate', async interaction => {
 			return interaction.reply(`Request Failed. Please Try again.`);
         }
 
-		let companies = response.json();
+		let companies = response.data;
 
 		interaction.reply(`Fetching players. . .`);
 		let chunks = [];
