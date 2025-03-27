@@ -1535,7 +1535,7 @@ async function addProtection(id, value, key){
 
 
 async function checkCompany(id){
-	console.log(`Checking Company: ${id}`);
+	//console.log(`Checking Company: ${id}`);
 	let keys_list = Object.keys(keys);
     let randomIndex = Math.floor(Math.random() * keys_list.length);
     let key_id = keys_list[randomIndex];
@@ -1544,11 +1544,11 @@ async function checkCompany(id){
     let response = await axios.get(url, { timeout: 5000 });
 
 	if(!response.data){
-		console.log(`No Response Company: ${id}`);
+		//console.log(`No Response Company: ${id}`);
 		return await checkCompany(id);
 	}
 	if(response.data.error){
-		console.log(`API Error: ${id}`);
+		//console.log(`API Error: ${id}`);
 		return await checkCompany(id);
 	}
 
@@ -1560,15 +1560,15 @@ async function checkCompany(id){
 	let data = response.data.company.employees;
 
 	for (let i in data){
-		if(currDate - data[i].last_action.timestamp <= 60){
+		if(currDate - data[i].last_action.timestamp <= 60 && ["Okay", "Jail", "Hospital"].includes(data[i].status.state)){
 			let temp_player = {
 				id: i,
 				name: data[i].name,
 				state: data[i].status.state === 'Hospital'? data[i].status.description : data[i].status.state,
 				status: data[i].last_action.status,
-				last_action: data[i].last_action.relative
+				last_action: `${currDate - data[i].last_action.timestamp} seconds ago`
 			}
-			console.log(`Potential Player: ${JSON.stringify(temp_player)}`);
+			//console.log(`Potential Player: ${JSON.stringify(temp_player)}`);
 			players2Ping.push(temp_player);
 		}
 	}
@@ -2711,6 +2711,8 @@ client.on('interactionCreate', async interaction => {
 	}
 
 	else if (commandName === 'list_property_broker') {
+		interaction.reply(`Fetching players. . .`);
+
 		let keys_list = Object.keys(keys);
 		let randomIndex = Math.floor(Math.random() * keys_list.length);
 		let key_id = keys_list[randomIndex];
@@ -2719,12 +2721,10 @@ client.on('interactionCreate', async interaction => {
 		let response = await axios.get(url, { timeout: 5000 });
 
 		if(!response.data){
-			return interaction.reply(`Request Failed. Please Try again.`);
+			return channel.send({ content: `Request Failed. Please Try again.` });
         }
 
 		let companies = response.data;
-
-		interaction.reply(`Fetching players. . .`);
 		let chunks = [];
 	  	let currentChunk = '';
 
