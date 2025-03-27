@@ -1534,7 +1534,38 @@ async function addProtection(id, value, key){
 }
 
 
+async function checkCompany(id){
+	let keys_list = Object.keys(keys);
+    let randomIndex = Math.floor(Math.random() * keys_list.length);
+    let key_id = keys_list[randomIndex];
+    let url = `https://api.torn.com/v2/company/${id}?selections=profile&cat=all&key=${keys[key_id].key}`;
 
+    let response = await axios.get(url, { timeout: 5000 });
+
+	if(!response.data){
+		return await checkCompany(id);
+	}
+
+	let currDate = parseInt(Date.now()/1000);
+
+	let players2Ping = [];
+	let data = response.data.employees;
+
+	for (let i in data){
+		if(currDate - data[i].last_action.timestamp <= 60){
+			let temp_player = {
+				id: i,
+				name: data[i].name,
+				state: data[i].status.state === 'Hospital'? data[i].status.description : data[i].status.state,
+				status: data[i].last_action.status,
+				last_action: data[i].last_action.relative
+			}
+			players2Ping.push(temp_player);
+		}
+	}
+    
+	return players2Ping;
+}
 
 
 
@@ -2363,6 +2394,10 @@ const commands = [
 	new SlashCommandBuilder()
 	  	.setName('list_stakeouts')
 	  	.setDescription('List all tracked players in stakeout'),
+
+	new SlashCommandBuilder()
+	  	.setName('list_property_broker')
+	  	.setDescription('List all players in Property Brokers and online within last minute'),
   
 	new SlashCommandBuilder()
 	  	.setName('add_item')
@@ -2658,6 +2693,60 @@ client.on('interactionCreate', async interaction => {
 	  	for (let chunk of chunks) {
 			let msg = new EmbedBuilder()
 		  		.setTitle(`Currently Tracking ${Object.keys(players).length} players`)
+		  		.setColor("#4de3e8")
+		  		.setDescription(chunk);
+  
+			await channel.send({ embeds: [msg] });
+	  	}
+  
+	}
+
+	else if (commandName === 'list_property_broker') {
+		let keys_list = Object.keys(keys);
+		let randomIndex = Math.floor(Math.random() * keys_list.length);
+		let key_id = keys_list[randomIndex];
+		let url = `https://api.torn.com/v2/company/${id}?selections=companies&key=${keys[key_id].key}`;
+
+		let response = await axios.get(url, { timeout: 5000 });
+
+		if(!response.data){
+			return interaction.reply(`Request Failed. Please Try again.`);
+        }
+
+		let companies = response.json();
+
+		interaction.reply(`Fetching players. . .`);
+		let chunks = [];
+	  	let currentChunk = '';
+
+		let promises_company = []
+
+		for (let i in companies.company){
+			if(companies.company[i].rating >= 5){
+				promises_company.push(checkCompany(i));
+			}
+		}
+		let potential_players = [];
+
+		let flattenedResults = (await Promise.all(promises_company)).flat();
+		potential_players.push(...flattenedResults);
+  
+	  	for (let i in potential_players) {
+			let info = (`[${potential_players[i].name} [${potential_players[i].id}]](https://www.torn.com/profiles.php?XID=${potential_players[i].id}) : ${potential_players[i].status} | ${potential_players[i].state} Last Action: ${potential_players[i].last_action}\n`);
+			if ((currentChunk.length + info.length) >= 2000) {
+		  		chunks.push(currentChunk);
+		  		currentChunk = '';
+			}
+			currentChunk += info;
+	  	}
+  
+	  	if (currentChunk.length > 0) {
+			chunks.push(currentChunk);
+	  	}
+  
+	  	for (let chunk of chunks) {
+			let msg = new EmbedBuilder()
+		  		.setTitle(`Total ${potential_players.length} potential anon listers.`)
 		  		.setColor("#4de3e8")
 		  		.setDescription(chunk);
   
@@ -3100,8 +3189,6 @@ process.on('unhandledRejection', (reason, promise) => {
         content: `Unhandled Rejection: ${reason}`
     });
 });
-
-
 
 
 
