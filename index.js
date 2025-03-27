@@ -1535,14 +1535,20 @@ async function addProtection(id, value, key){
 
 
 async function checkCompany(id){
+	console.log(`Checking Company: ${id}`);
 	let keys_list = Object.keys(keys);
     let randomIndex = Math.floor(Math.random() * keys_list.length);
     let key_id = keys_list[randomIndex];
-    let url = `https://api.torn.com/v2/company/${id}?selections=profile&cat=all&key=${keys[key_id].key}`;
+    let url = `https://api.torn.com/v2/company/${id}?selections=profile&key=${keys[key_id].key}`;
 
     let response = await axios.get(url, { timeout: 5000 });
 
 	if(!response.data){
+		console.log(`No Response Company: ${id}`);
+		return await checkCompany(id);
+	}
+	if(response.data.error){
+		console.log(`API Error: ${id}`);
 		return await checkCompany(id);
 	}
 
@@ -1560,6 +1566,7 @@ async function checkCompany(id){
 				status: data[i].last_action.status,
 				last_action: data[i].last_action.relative
 			}
+			console.log(`Potential Player: ${JSON.stringify(temp_player)}`);
 			players2Ping.push(temp_player);
 		}
 	}
