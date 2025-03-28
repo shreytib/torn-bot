@@ -2814,21 +2814,28 @@ client.on('interactionCreate', async interaction => {
 
 	else if (commandName === 'list_keys') {
 		interaction.reply({content: `${Object.keys(keys).length} Keys in database.`, ephemeral: true });
-		let msg = "";
-		for (let ky in keys){
-			msg+=`${keys[ky].holder} [${keys[ky].id}]\n`;
-		}
-		const status = new EmbedBuilder()
-		.setTitle(`${Object.keys(keys).length} Keys in database.`)
-		.setColor('#4de3e8')
-		.addFields(
-			{
-				name: 'Username [id]',
-				value: msg != '' ? msg : `No users`,
-				inline: true
+
+		for (let ky in keys) {
+			let info = `${keys[ky].holder} [${keys[ky].id}]\n`;
+			if ((currentChunk.length + info.length) >= 2000) {
+		  		chunks.push(currentChunk);
+		  		currentChunk = '';
 			}
-		);
-		return channel.send({ embeds: [status] });
+			currentChunk += info;
+	  	}
+  
+	  	if (currentChunk.length > 0) {
+			chunks.push(currentChunk);
+	  	}
+  
+	  	for (let chunk of chunks) {
+			let msg = new EmbedBuilder()
+		  		.setTitle(`${Object.keys(keys).length} Keys in database.`)
+		  		.setColor("#4de3e8")
+		  		.setDescription(chunk);
+  
+			await channel.send({ embeds: [msg] });
+	  	}
 	}
 	
 	else if (commandName === 'add_item') {
