@@ -2815,6 +2815,10 @@ client.on('interactionCreate', async interaction => {
 	else if (commandName === 'list_keys') {
 		interaction.reply({content: `${Object.keys(keys).length} Keys in database.`, ephemeral: true });
 
+		
+		let chunks = [];
+	  	let currentChunk = '';
+
 		for (let ky in keys) {
 			let info = `${keys[ky].holder} [${keys[ky].id}]\n`;
 			if ((currentChunk.length + info.length) >= 2000) {
