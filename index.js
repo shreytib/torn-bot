@@ -1215,6 +1215,10 @@ async function TornPalChecking(index) {
 			return console.error('Error TornPal Fetch:', error.message);
 		}
 		let data = response.data;
+
+		if(data.listings.length === 0){
+			return;
+		}
 		
 		if(data.meta.marketlowestprice <= items[index].minimum || data.meta.bazaarlowestprice <= items[index].minimum){
 			const minCost = data.listings[0].price;
@@ -1790,7 +1794,7 @@ async function runTornPalChecking(){
 	
 	let endTornPal = performance.now(); // Record end time
     elapsedTimeTornPal = Math.round(endTornPal - startTornPal); // Calculate elapsed time
-    console.log(`[  TornPal  ] x${Object.keys(TornPal).length} Wait Time: ${minTimeTornPal} at:`, new Date(), `in ${elapsedTimeTornPal} miliseconds.`);
+    console.log(`[  TornPal  ] x${Object.keys(items).length} Wait Time: ${minTimeTornPal} at:`, new Date(), `in ${elapsedTimeTornPal} miliseconds.`);
 }
 
 
