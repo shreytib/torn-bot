@@ -1783,10 +1783,10 @@ async function runTornPalChecking(){
 	const promisesTornPal = [];
 
 	for (let i in items) {
-		promises.push(TornPalChecking(i));
+		promisesTornPal.push(TornPalChecking(i));
 	}
 	
-	await Promise.all(promises);
+	await Promise.all(promisesTornPal);
 	
 	let endTornPal = performance.now(); // Record end time
     elapsedTimeTornPal = Math.round(endTornPal - startTornPal); // Calculate elapsed time
