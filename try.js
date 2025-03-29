@@ -1,9 +1,10 @@
 const fs = require("fs");
 
 
-//let listings = require('./listings.json');
+let items = require('./items.json');
+//console.log(Object.keys(items).length);
 
-const axios = require('axios');
+//const axios = require('axios');
 
 
 

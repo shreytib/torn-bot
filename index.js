@@ -204,6 +204,7 @@ let pingedUser = require('./pingedUser.json'); // "1441750" : [value, time];
 
 let pingedStalklist = {};
 let pingedUserCheapRW = {};
+let pingedTornPal = {};
 
 let bot_pause = 0;
 let count_calls = 0;
@@ -227,6 +228,7 @@ let minTimeStakeout = 10 * 1000;
 let minTimeProtection = 31 * 1000;
 let minTimeUser = 30 * 1000;
 let minTimeRW = 30 * 1000;
+let minTimeTornPal = 30 * 1000;
 
 function shortenNumber(num) {
 	let prefix = '';
@@ -1198,6 +1200,71 @@ async function moneyChecking(i, data = null){
 	}
 }
 
+async function TornPalChecking(index) {
+	let currDate = parseInt(Date.now()/1000);
+
+    let url = `https://tornpal.com/api/v1/markets/clist/${index}?comment=_SCOfield_[1441750]Bot`;
+	try{
+		const response = await axios.get(url, {
+			timeout: 5000,
+			headers: {
+				'Accept': 'application/json'
+			}
+		});
+		if(!response.data){
+			return console.error('Error TornPal Fetch:', error.message);
+		}
+		let data = response.data;
+		
+		if(data.meta.marketlowestprice <= items[index].minimum || data.meta.bazaarlowestprice <= items[index].minimum){
+			const minCost = data.listings[0].price;
+			const qty = data.listings[0].amount;
+			let diff = (items[index].minimum - minCost) * qty;
+			let color = "#0ca60c";
+			url = data.listings[0].source === "itemmarket" ? `https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${index}` : `https://www.torn.com/bazaar.php?userId=${data.listings[0].player_id}&itemId=${index}&highlight=1#/`;
+			let text_desc = data.listings[0].source === "itemmarket" ? `CHEAP LISTING MARKET` : `CHEAP LISTING BAZAAR ${data.listings[0].player_name} [${data.listings[0].player_id}]`;
+			
+			if(diff >= 0){
+				
+				if(pingedTornPal[index] && pingedTornPal[index].price === data.listings[0].price && pingedTornPal[index].player_id === data.listings[0].player_id && currDate - pingedTornPal[index].timestamp <= 300){
+					// already pinged
+					return;
+				}
+				let status = new EmbedBuilder();
+				status.setTitle(`${qty}x ${items[index].name} [${index}]`)
+					.setColor(color)
+					.setURL(url)
+					.setDescription(text_desc)
+					.addFields(
+						{ name: 'Price', value: `$${shortenNumber(minCost)}`, inline: true },
+						{ name: ' ', value: " ", inline: true },
+						{ name: 'Quantity', value: `${qty}`, inline: true },
+						{ name: 'Profit', value: `$${shortenNumber(diff)}`, inline: true },
+						{ name: ' ', value: " ", inline: true },
+						{ name: 'Tracking under', value: `$${shortenNumber(items[index].minimum)}`, inline: true }
+					)
+					.setFooter({ text: `Pinged at ${new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '')}\nSource: TornPal` });
+
+				if(diff >= 5000000){
+					client.channels.cache.get(bot.channel_cheapbuys).send({ content: `<@&${bot.role_buy}>`, embeds: [status] });
+				}
+				else{
+					client.channels.cache.get(bot.channel_cheapbuys).send({ embeds: [status] });
+				}
+				pingedTornPal[index] = {
+					price: data.listings[0].price,
+					player_id: data.listings[0].player_id,
+					timestamp: currDate
+				};
+				return console.log(`${items[index].name} has a new listing with potential profit: $${diff}, sending message`);
+			}
+		}
+	}
+	catch(error) {
+		console.log(`Unexpected TornPal error: ${error}`);
+		client.channels.cache.get(bot.channel_error).send({ content:`Unexpected error in TornPal: ${error.message}\n${error.stack}` });
+	}
+}
 
 
 
@@ -1709,6 +1776,23 @@ async function runRWChecking(count){
 	fs.writeFileSync('pingedUser.json', JSON.stringify(pingedUser));
 }
 
+async function runTornPalChecking(){
+	let elapsedTimeTornPal = 0.0;
+	let startTornPal = performance.now();
+	
+	const promisesTornPal = [];
+
+	for (let i in items) {
+		promises.push(TornPalChecking(i));
+	}
+	
+	await Promise.all(promises);
+	
+	let endTornPal = performance.now(); // Record end time
+    elapsedTimeTornPal = Math.round(endTornPal - startTornPal); // Calculate elapsed time
+    console.log(`[  TornPal  ] x${Object.keys(TornPal).length} Wait Time: ${minTimeTornPal} at:`, new Date(), `in ${elapsedTimeTornPal} miliseconds.`);
+}
+
 
 
 
@@ -1863,6 +1947,49 @@ const StartLoop = async () => {
 		
 	};
 
+	const manageCheckTornPal = async () => {
+		try{
+            async function GetDatTornPal() {
+				try {
+					const startTime = Date.now(); // Record the start time
+					//console.log("Starting Loop players at: ", new Date());
+
+					// Call your function and wait for it to complete
+					await runTornPalChecking();
+		
+					if(bot_pause >= 100){
+						console.log(`API disabled. TornPal paused for 1 minute at:`, new Date());
+						await sleep(60 * 1000);
+						bot_pause = 0;
+					}
+					
+					const endTime = Date.now(); // Record the end time
+					const elapsedTime = endTime - startTime; // Calculate elapsed time
+					
+					const waitTime = Math.max(minTimeTornPal - elapsedTime, 0);
+		
+					// Recur to the next iteration of GetDatTornPal
+					setTimeout(() => {
+						GetDatTornPal();
+					}, waitTime);
+				} catch (error) {
+					console.error(`An error occurred: ${error.message}\n${error.stack}`);
+					client.channels.cache.get(bot.channel_error).send({ content:`An error occurred in TORNPAL LOOP (1): ${error.message}\n${error.stack}` });
+					// Optionally, handle the error (e.g., retry the function or exit the loop)
+				}
+			}
+			
+			// Start the loop
+			await GetDatTornPal();
+		}
+		catch(error){
+			console.log(`ERROR IN TORNPAL LOOP: ${error.message}\n${error.stack}`);
+			client.channels.cache.get(bot.channel_error).send({ content: `ERROR IN TORNPAL LOOP: ${error.message}\n${error.stack}` });
+			await sleep(60 * 1000);
+			manageCheckTornPal();
+		}
+	};
+
 	const outputApiCallsCount = async () => {
 		console.log(`.\nLast minute API calls count: ${count_calls}; at: ${new Date()}\n.`);
 		count_calls = 0;
@@ -1942,6 +2069,7 @@ const StartLoop = async () => {
 	outputApiCallsCount();
 	outputStakeoutCallsCount();
 	resetTempInvalidKeys();
+	manageCheckTornPal();
 
 	for(let index in players){
 		runStakeoutChecking(index, 0);
